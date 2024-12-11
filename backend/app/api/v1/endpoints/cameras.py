@@ -8,6 +8,7 @@ from ....services.camera_manager import CameraManager
 import cv2
 import asyncio
 import logging
+from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
@@ -157,7 +158,7 @@ async def camera_websocket(
     camera_id: int,
     db: Session = Depends(get_db)
 ):
-    """WebSocket endpoint for real-time camera feed"""
+    """WebSocket endpoint for real-time camera feed with processing"""
     await websocket.accept()
     camera_manager = CameraManager(db)
     
@@ -169,17 +170,32 @@ async def camera_websocket(
 
         while True:
             try:
-                # Get the latest frame
-                frame = camera_manager.active_streams[camera_id]['last_frame']
-                if frame is not None:
-                    # Encode frame to JPEG
-                    _, buffer = cv2.imencode('.jpg', frame)
-                    # Send frame
-                    await websocket.send_bytes(buffer.tobytes())
+                # Get the latest frame and processing results
+                stream = camera_manager.active_streams.get(camera_id)
+                if not stream or stream.get('last_frame') is None:
+                    await asyncio.sleep(0.033)
+                    continue
+
+                frame = stream['last_frame']
+                processed_frame, results = await camera_manager._process_frame(camera_id, frame)
+
+                # Encode frame to JPEG
+                _, buffer = cv2.imencode('.jpg', processed_frame)
+                
+                # Send frame and results
+                await websocket.send_json({
+                    'type': 'frame',
+                    'timestamp': datetime.now().isoformat(),
+                    'results': results
+                })
+                await websocket.send_bytes(buffer.tobytes())
+                
                 await asyncio.sleep(0.033)  # ~30 FPS
+                
             except Exception as e:
                 logger.error(f"Error sending frame: {str(e)}")
                 break
+                
     except Exception as e:
         logger.error(f"WebSocket error: {str(e)}")
     finally:

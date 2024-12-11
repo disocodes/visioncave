@@ -1,132 +1,55 @@
 import { createSlice } from '@reduxjs/toolkit';
 
 const initialState = {
-  occupancy: {
-    zones: [],
-    total: { current: 0, capacity: 0 },
-    lastUpdated: null,
-  },
-  trafficFlow: {
-    currentFlow: 0,
-    avgSpeed: 0,
-    congestionLevel: 0,
-    flowChange: 0,
-    speedChange: 0,
-    congestionChange: 0,
-    hourlyData: [],
-    lastUpdated: null,
-  },
-  safetyMonitor: {
-    status: 'normal',
-    stats: {
-      violations: 0,
-      warnings: 0,
-      compliant: 0,
-    },
-    recentEvents: [],
-    lastUpdated: null,
-  },
   analytics: {
-    detectionRate: 0,
-    accuracy: 0,
-    processingTime: 0,
-    objectsDetected: 0,
-    timeSeriesData: [],
-    lastUpdated: null,
-  },
-  classroom: {
-    classrooms: [],
-    averages: {
-      attention: 0,
-      activity: 0,
-      occupancy: 0
-    },
-    lastUpdated: null,
-  },
-  equipment: {
+    occupancy: [],
+    traffic: [],
+    safety: [],
     equipment: [],
-    summary: {
-      total: 0,
-      active: 0,
-      warning: 0,
-      critical: 0
-    },
-    alerts: [],
-    lastUpdated: null,
   },
+  zones: [],
+  alerts: [],
 };
 
-const widgetDataSlice = createSlice({
+export const widgetDataSlice = createSlice({
   name: 'widgetData',
   initialState,
   reducers: {
-    updateOccupancyData: (state, action) => {
-      state.occupancy = {
-        ...action.payload,
-        lastUpdated: new Date().toISOString(),
-      };
+    updateAnalytics: (state, action) => {
+      state.analytics = { ...state.analytics, ...action.payload };
     },
-    updateTrafficFlowData: (state, action) => {
-      state.trafficFlow = {
-        ...action.payload,
-        lastUpdated: new Date().toISOString(),
-      };
+    updateZones: (state, action) => {
+      state.zones = action.payload;
     },
-    updateSafetyData: (state, action) => {
-      state.safetyMonitor = {
-        ...action.payload,
-        lastUpdated: new Date().toISOString(),
-      };
+    addZone: (state, action) => {
+      state.zones.push(action.payload);
     },
-    updateAnalyticsData: (state, action) => {
-      state.analytics = {
-        ...action.payload,
-        lastUpdated: new Date().toISOString(),
-      };
+    removeZone: (state, action) => {
+      state.zones = state.zones.filter(zone => zone.id !== action.payload);
     },
-    updateClassroomData: (state, action) => {
-      state.classroom = {
-        ...action.payload,
-        lastUpdated: new Date().toISOString(),
-      };
-    },
-    updateEquipmentData: (state, action) => {
-      state.equipment = {
-        ...action.payload,
-        lastUpdated: new Date().toISOString(),
-      };
-    },
-    addSafetyEvent: (state, action) => {
-      state.safetyMonitor.recentEvents.unshift(action.payload);
-      if (state.safetyMonitor.recentEvents.length > 10) {
-        state.safetyMonitor.recentEvents.pop();
+    updateZone: (state, action) => {
+      const index = state.zones.findIndex(zone => zone.id === action.payload.id);
+      if (index !== -1) {
+        state.zones[index] = action.payload;
       }
     },
-    addTrafficDataPoint: (state, action) => {
-      state.trafficFlow.hourlyData.push(action.payload);
-      if (state.trafficFlow.hourlyData.length > 24) {
-        state.trafficFlow.hourlyData.shift();
-      }
+    addAlert: (state, action) => {
+      state.alerts.push(action.payload);
     },
-    addEquipmentAlert: (state, action) => {
-      state.equipment.alerts.unshift(action.payload);
-      if (state.equipment.alerts.length > 50) {
-        state.equipment.alerts.pop();
-      }
+    clearAlerts: (state) => {
+      state.alerts = [];
     },
   },
 });
 
 export const {
-  updateOccupancyData,
-  updateTrafficFlowData,
-  updateSafetyData,
-  updateAnalyticsData,
-  updateClassroomData,
-  updateEquipmentData,
-  addSafetyEvent,
-  addTrafficDataPoint,
-  addEquipmentAlert,
+  updateAnalytics,
+  updateZones,
+  addZone,
+  removeZone,
+  updateZone,
+  addAlert,
+  clearAlerts,
 } = widgetDataSlice.actions;
 
 export default widgetDataSlice.reducer;

@@ -1,162 +1,116 @@
 import React, { useState, useEffect } from 'react';
-import { Box, Button, IconButton, Paper, Typography, Grid, Alert } from '@mui/material';
-import { Add as AddIcon, Delete as DeleteIcon } from '@mui/icons-material';
-import { useNavigate, useParams } from 'react-router-dom';
-import CameraWidget from '../components/widgets/CameraWidget';
-import AnalyticsWidget from '../components/widgets/AnalyticsWidget';
+import { useParams, useNavigate } from 'react-router-dom';
+import {
+  Box,
+  Grid,
+  Typography,
+  Paper,
+  IconButton,
+  Button,
+} from '@mui/material';
+import { Add as AddIcon, Settings as SettingsIcon } from '@mui/icons-material';
+
+// Import base widgets
+import CameraStreamWidget from '../components/widgets/CameraStreamWidget';
+import AnalyticsDashboardWidget from '../components/widgets/AnalyticsDashboardWidget';
+import SafetyMonitorWidget from '../components/widgets/SafetyMonitorWidget';
 import AlertWidget from '../components/widgets/AlertWidget';
 
-// Module-specific widget configurations
-const moduleWidgets = {
-  residential: [
-    { id: 'camera-main', type: 'camera', title: 'Live Camera Feed', isPermanent: true },
-    { id: 'occupancy', type: 'analytics', title: 'Occupancy Tracking' },
-    { id: 'package', type: 'analytics', title: 'Package Detection' },
-    { id: 'suspicious', type: 'alert', title: 'Suspicious Activity Alerts' }
-  ],
-  school: [
-    { id: 'camera-main', type: 'camera', title: 'Live Camera Feed', isPermanent: true },
-    { id: 'attendance', type: 'analytics', title: 'Student Attendance' },
-    { id: 'playground', type: 'analytics', title: 'Playground Safety' },
-    { id: 'classroom', type: 'analytics', title: 'Classroom Attention Analysis' }
-  ],
-  hospital: [
-    { id: 'camera-main', type: 'camera', title: 'Live Camera Feed', isPermanent: true },
-    { id: 'fall', type: 'alert', title: 'Patient Fall Detection' },
-    { id: 'hygiene', type: 'analytics', title: 'Hygiene Compliance' },
-    { id: 'equipment', type: 'analytics', title: 'Equipment Tracking' }
-  ],
-  mine: [
-    { id: 'camera-main', type: 'camera', title: 'Live Camera Feed', isPermanent: true },
-    { id: 'machinery', type: 'analytics', title: 'Heavy Machinery Tracking' },
-    { id: 'safety', type: 'alert', title: 'Safety Gear Compliance' },
-    { id: 'hazard', type: 'alert', title: 'Hazardous Area Monitoring' }
-  ],
-  traffic: [
-    { id: 'camera-main', type: 'camera', title: 'Live Camera Feed', isPermanent: true },
-    { id: 'flow', type: 'analytics', title: 'Traffic Flow Analysis' },
-    { id: 'parking', type: 'analytics', title: 'Parking Occupancy' },
-    { id: 'incidents', type: 'alert', title: 'Public Safety Incidents' }
-  ]
-};
+// Import module-specific widgets
+import { ResidentialSecurityWidget } from '../components/widgets/residential';
+import { SchoolAttendanceWidget } from '../components/widgets/school';
+import { PatientMonitorWidget, StaffTrackingWidget } from '../components/widgets/hospital';
 
-// Module titles for the dashboard header
-const moduleTitles = {
-  residential: 'Residential Vision Dashboard',
-  school: 'School Vision Dashboard',
-  hospital: 'Hospital Vision Dashboard',
-  mine: 'Mine Site Vision Dashboard',
-  traffic: 'Traffic Vision Dashboard'
+const moduleConfigs = {
+  residential: {
+    title: 'Residential Vision Dashboard',
+    widgets: [
+      { id: 'camera', component: CameraStreamWidget, title: 'Live Camera Feed', w: 6, h: 4 },
+      { id: 'analytics', component: AnalyticsDashboardWidget, title: 'Analytics Overview', w: 6, h: 4 },
+      { id: 'security', component: ResidentialSecurityWidget, title: 'Security Status', w: 4, h: 3 },
+      { id: 'alerts', component: AlertWidget, title: 'Security Alerts', w: 4, h: 3 },
+    ],
+  },
+  school: {
+    title: 'School Vision Dashboard',
+    widgets: [
+      { id: 'camera', component: CameraStreamWidget, title: 'Live Camera Feed', w: 6, h: 4 },
+      { id: 'analytics', component: AnalyticsDashboardWidget, title: 'Analytics Overview', w: 6, h: 4 },
+      { id: 'attendance', component: SchoolAttendanceWidget, title: 'Student Attendance', w: 4, h: 3 },
+      { id: 'safety', component: SafetyMonitorWidget, title: 'Safety Monitor', w: 4, h: 3 },
+    ],
+  },
+  hospital: {
+    title: 'Hospital Vision Dashboard',
+    widgets: [
+      { id: 'camera', component: CameraStreamWidget, title: 'Live Camera Feed', w: 6, h: 4 },
+      { id: 'analytics', component: AnalyticsDashboardWidget, title: 'Analytics Overview', w: 6, h: 4 },
+      { id: 'patients', component: PatientMonitorWidget, title: 'Patient Monitoring', w: 6, h: 3 },
+      { id: 'staff', component: StaffTrackingWidget, title: 'Staff Tracking', w: 6, h: 3 },
+      { id: 'safety', component: SafetyMonitorWidget, title: 'Safety Monitor', w: 4, h: 3 },
+      { id: 'alerts', component: AlertWidget, title: 'Medical Alerts', w: 4, h: 3 },
+    ],
+  },
 };
 
 const Dashboard = () => {
-  const { moduleId } = useParams();
+  const { moduleType } = useParams();
   const navigate = useNavigate();
   const [activeWidgets, setActiveWidgets] = useState([]);
-  const [availableWidgets, setAvailableWidgets] = useState([]);
 
   useEffect(() => {
-    if (!moduleId || !moduleWidgets[moduleId]) {
+    if (!moduleType || !moduleConfigs[moduleType]) {
       navigate('/');
       return;
     }
+    setActiveWidgets(moduleConfigs[moduleType].widgets);
+  }, [moduleType, navigate]);
 
-    // Initialize widgets based on module configuration
-    const moduleConfig = moduleWidgets[moduleId];
-    setActiveWidgets(moduleConfig.filter(widget => widget.isPermanent));
-    setAvailableWidgets(moduleConfig.filter(widget => !widget.isPermanent));
-  }, [moduleId, navigate]);
-
-  const handleAddWidget = (widget) => {
-    setActiveWidgets([...activeWidgets, widget]);
-    setAvailableWidgets(availableWidgets.filter(w => w.id !== widget.id));
-  };
-
-  const handleRemoveWidget = (widgetId) => {
-    const widget = activeWidgets.find(w => w.id === widgetId);
-    if (widget && !widget.isPermanent) {
-      setActiveWidgets(activeWidgets.filter(w => w.id !== widgetId));
-      setAvailableWidgets([...availableWidgets, widget]);
-    }
-  };
-
-  const renderWidget = (widget) => {
-    switch (widget.type) {
-      case 'camera':
-        return <CameraWidget key={widget.id} title={widget.title} />;
-      case 'analytics':
-        return <AnalyticsWidget key={widget.id} title={widget.title} />;
-      case 'alert':
-        return <AlertWidget key={widget.id} title={widget.title} />;
-      default:
-        return null;
-    }
-  };
-
-  if (!moduleId || !moduleWidgets[moduleId]) {
-    return (
-      <Box sx={{ p: 3 }}>
-        <Alert severity="error">Invalid module selected</Alert>
-      </Box>
-    );
+  if (!moduleType || !moduleConfigs[moduleType]) {
+    return null;
   }
 
   return (
     <Box sx={{ p: 3 }}>
-      <Box sx={{ mb: 4 }}>
-        <Typography variant="h4" component="h1" gutterBottom>
-          {moduleTitles[moduleId]}
-        </Typography>
-        
-        {availableWidgets.length > 0 && (
-          <Box sx={{ mt: 2, mb: 3 }}>
-            <Typography variant="h6" gutterBottom>
-              Add Widgets
-            </Typography>
-            <Box sx={{ display: 'flex', gap: 1 }}>
-              {availableWidgets.map((widget) => (
-                <Button
-                  key={widget.id}
-                  variant="outlined"
-                  startIcon={<AddIcon />}
-                  onClick={() => handleAddWidget(widget)}
-                  sx={{ borderColor: 'rgba(255, 255, 255, 0.23)', color: 'white' }}
-                >
-                  {widget.title}
-                </Button>
-              ))}
-            </Box>
-          </Box>
-        )}
+      <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <Typography variant="h4">{moduleConfigs[moduleType].title}</Typography>
+        <Box>
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            sx={{ mr: 1 }}
+          >
+            Add Widget
+          </Button>
+          <IconButton>
+            <SettingsIcon />
+          </IconButton>
+        </Box>
       </Box>
 
       <Grid container spacing={3}>
-        {activeWidgets.map((widget) => (
-          <Grid item xs={12} md={6} lg={4} key={widget.id}>
-            <Paper
-              sx={{
-                p: 2,
-                backgroundColor: '#2a2a2a',
-                color: 'white',
-                position: 'relative',
-              }}
-            >
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                <Typography variant="h6">{widget.title}</Typography>
-                {!widget.isPermanent && (
-                  <IconButton
-                    size="small"
-                    onClick={() => handleRemoveWidget(widget.id)}
-                    sx={{ color: 'rgba(255, 255, 255, 0.7)' }}
-                  >
-                    <DeleteIcon />
-                  </IconButton>
-                )}
-              </Box>
-              {renderWidget(widget)}
-            </Paper>
-          </Grid>
-        ))}
+        {activeWidgets.map((widget) => {
+          const WidgetComponent = widget.component;
+          return (
+            <Grid item xs={12} md={widget.w} key={widget.id}>
+              <Paper
+                sx={{
+                  p: 2,
+                  height: widget.h * 100,
+                  display: 'flex',
+                  flexDirection: 'column',
+                }}
+              >
+                <Typography variant="h6" gutterBottom>
+                  {widget.title}
+                </Typography>
+                <Box sx={{ flexGrow: 1 }}>
+                  <WidgetComponent moduleType={moduleType} />
+                </Box>
+              </Paper>
+            </Grid>
+          );
+        })}
       </Grid>
     </Box>
   );

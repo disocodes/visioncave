@@ -9,8 +9,15 @@ import WidgetBuilder from './pages/WidgetBuilder';
 import CameraManagement from './pages/CameraManagement';
 import Models from './pages/ModelsPage';
 import Settings from './pages/Settings';
+import ModuleSelection from './pages/ModuleSelection';
+import SiteManagement from './pages/SiteManagement';
+import UserManagement from './pages/UserManagement';
+import { AuthProvider } from './contexts/AuthContext';
+import { SiteProvider } from './contexts/SiteContext';
+import { CameraProvider } from './contexts/CameraContext';
+import { AnalyticsProvider } from './contexts/AnalyticsContext';
+import { WidgetProvider } from './contexts/WidgetContext';
 
-// Create a dark theme
 const theme = createTheme({
   palette: {
     mode: 'dark',
@@ -43,21 +50,32 @@ function App() {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <Router>
-        <Routes>
-          <Route path="/" element={<LandingPage />} />
-          <Route path="/" element={<Layout />}>
-            <Route path="dashboard">
-              <Route path="vision/:moduleId" element={<Dashboard />} />
-            </Route>
-            <Route path="widget-builder" element={<WidgetBuilder />} />
-            <Route path="camera-management" element={<CameraManagement />} />
-            <Route path="models" element={<Models />} />
-            <Route path="settings" element={<Settings />} />
-          </Route>
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </Router>
+      <AuthProvider>
+        <SiteProvider>
+          <CameraProvider>
+            <AnalyticsProvider>
+              <WidgetProvider>
+                <Router>
+                  <Routes>
+                    <Route path="/login" element={<LandingPage />} />
+                    <Route element={<Layout />}>
+                      <Route path="/" element={<ModuleSelection />} />
+                      <Route path="/module/:moduleType" element={<Dashboard />} />
+                      <Route path="/widget-builder" element={<WidgetBuilder />} />
+                      <Route path="/camera-management" element={<CameraManagement />} />
+                      <Route path="/site-management" element={<SiteManagement />} />
+                      <Route path="/user-management" element={<UserManagement />} />
+                      <Route path="/models" element={<Models />} />
+                      <Route path="/settings" element={<Settings />} />
+                    </Route>
+                    <Route path="*" element={<Navigate to="/" replace />} />
+                  </Routes>
+                </Router>
+              </WidgetProvider>
+            </AnalyticsProvider>
+          </CameraProvider>
+        </SiteProvider>
+      </AuthProvider>
     </ThemeProvider>
   );
 }

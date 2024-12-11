@@ -13,6 +13,7 @@ from concurrent.futures import ThreadPoolExecutor
 import threading
 from queue import Queue
 import time
+import torch
 
 logger = logging.getLogger(__name__)
 
@@ -187,7 +188,7 @@ class CameraService:
                 
                 # Run object detection if configured
                 if config.get('enableObjectDetection'):
-                    detections = self._detect_objects(processed_frame)
+                    detections = self._detect_objects(processed_frame, config)
                     # Send detections to Kafka
                     self._send_to_kafka('detections', {
                         'camera_id': camera_id,
@@ -197,7 +198,7 @@ class CameraService:
                 
                 # Run analytics if configured
                 if config.get('enableAnalytics'):
-                    analytics = self._analyze_frame(processed_frame)
+                    analytics = self._analyze_frame(processed_frame, config)
                     # Send analytics to Kafka
                     self._send_to_kafka('analytics', {
                         'camera_id': camera_id,
@@ -216,29 +217,111 @@ class CameraService:
                 width, height = map(int, config['resolution'].split('x'))
                 frame = cv2.resize(frame, (width, height))
             
-            # Apply additional preprocessing based on configuration
-            if config.get('grayscale'):
-                frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+            # Apply color space conversion
+            if config.get('colorspace'):
+                if config['colorspace'] == 'grayscale':
+                    frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+                elif config['colorspace'] == 'hsv':
+                    frame = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
             
+            # Apply denoising
+            if config.get('denoise'):
+                if len(frame.shape) == 3:
+                    frame = cv2.fastNlMeansDenoisingColored(frame)
+                else:
+                    frame = cv2.fastNlMeansDenoising(frame)
+            
+            # Apply blur
             if config.get('blur'):
-                frame = cv2.GaussianBlur(frame, (5, 5), 0)
+                kernel_size = config.get('blur_kernel', 5)
+                frame = cv2.GaussianBlur(frame, (kernel_size, kernel_size), 0)
+            
+            # Apply histogram equalization
+            if config.get('equalize_hist'):
+                if len(frame.shape) == 2:
+                    frame = cv2.equalizeHist(frame)
+                else:
+                    ycrcb = cv2.cvtColor(frame, cv2.COLOR_BGR2YCrCb)
+                    ycrcb[:,:,0] = cv2.equalizeHist(ycrcb[:,:,0])
+                    frame = cv2.cvtColor(ycrcb, cv2.COLOR_YCrCb2BGR)
             
             return frame
         except Exception as e:
             logger.error(f"Error in preprocessing: {str(e)}")
             return frame
 
-    def _detect_objects(self, frame: np.ndarray) -> List[Dict[str, Any]]:
-        """Detect objects in frame."""
-        # Implement object detection using your preferred model
-        # This is a placeholder
-        return []
-
-    def _analyze_frame(self, frame: np.ndarray) -> Dict[str, Any]:
+    def _analyze_frame(self, frame: np.ndarray, config: Dict[str, Any]) -> Dict[str, Any]:
         """Generate analytics from frame."""
-        # Implement frame analysis
-        # This is a placeholder
-        return {}
+        analytics = {}
+        
+        try:
+            # Basic image statistics
+            if config.get('basic_stats'):
+                if len(frame.shape) == 3:
+                    for i, channel in enumerate(['blue', 'green', 'red']):
+                        analytics[f'{channel}_mean'] = float(np.mean(frame[:,:,i]))
+                        analytics[f'{channel}_std'] = float(np.std(frame[:,:,i]))
+                else:
+                    analytics['mean'] = float(np.mean(frame))
+                    analytics['std'] = float(np.std(frame))
+
+            # Edge detection
+            if config.get('edge_detection'):
+                edges = cv2.Canny(frame, 100, 200)
+                analytics['edge_density'] = float(np.mean(edges > 0))
+
+            # Movement analysis
+            if config.get('movement_analysis'):
+                if not hasattr(self, '_prev_frame'):
+                    self._prev_frame = frame
+                else:
+                    diff = cv2.absdiff(frame, self._prev_frame)
+                    analytics['movement_intensity'] = float(np.mean(diff))
+                    self._prev_frame = frame
+
+            # Brightness analysis
+            if config.get('brightness_analysis'):
+                if len(frame.shape) == 3:
+                    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+                else:
+                    gray = frame
+                analytics['brightness'] = float(np.mean(gray))
+                analytics['contrast'] = float(np.std(gray))
+
+            return analytics
+        except Exception as e:
+            logger.error(f"Error in frame analysis: {str(e)}")
+            return analytics
+
+    def _detect_objects(self, frame: np.ndarray, config: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """Detect objects in frame using configured model."""
+        try:
+            if not hasattr(self, '_detector'):
+                # Initialize detector based on config
+                model_type = config.get('model_type', 'yolov5')
+                if model_type == 'yolov5':
+                    self._detector = torch.hub.load('ultralytics/yolov5', 'yolov5s')
+                else:
+                    raise ValueError(f"Unsupported model type: {model_type}")
+
+            # Run inference
+            results = self._detector(frame)
+            
+            # Parse results
+            detections = []
+            for *xyxy, conf, cls in results.xyxy[0]:
+                x1, y1, x2, y2 = map(int, xyxy)
+                detections.append({
+                    'bbox': [x1, y1, x2, y2],
+                    'confidence': float(conf),
+                    'class': int(cls),
+                    'class_name': results.names[int(cls)]
+                })
+
+            return detections
+        except Exception as e:
+            logger.error(f"Error in object detection: {str(e)}")
+            return []
 
     def _send_to_kafka(self, topic: str, message: Dict[str, Any]):
         """Send message to Kafka topic."""

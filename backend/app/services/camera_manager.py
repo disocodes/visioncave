@@ -1,6 +1,6 @@
 import cv2
 import numpy as np
-from typing import Dict, Optional, List
+from typing import Dict, Optional, List, Tuple
 import asyncio
 import logging
 import subprocess
@@ -215,7 +215,8 @@ class CameraManager:
                 # Process frame if processor exists
                 if camera_id in self.frame_processors:
                     try:
-                        await self.frame_processors[camera_id](frame)
+                        processed_frame, results = await self._process_frame(camera_id, frame)
+                        # Handle results
                     except Exception as e:
                         logger.error(f"Error processing frame: {str(e)}")
 
@@ -224,14 +225,89 @@ class CameraManager:
             logger.error(f"Error in frame reading loop: {str(e)}")
             await self.stop_stream(camera_id)
 
-    def add_frame_processor(self, camera_id: int, processor):
+    def add_frame_processor(self, camera_id: int, processor_config: Dict):
         """Add a frame processor for a camera"""
-        self.frame_processors[camera_id] = processor
+        if camera_id not in self.frame_processors:
+            self.frame_processors[camera_id] = []
+        
+        processor_type = processor_config.get('type', 'default')
+        if processor_type == 'object_detection':
+            processor = self._create_object_detector(processor_config)
+        elif processor_type == 'motion_detection':
+            processor = self._create_motion_detector(processor_config)
+        else:
+            processor = lambda frame: frame
+            
+        self.frame_processors[camera_id].append({
+            'type': processor_type,
+            'config': processor_config,
+            'processor': processor
+        })
 
-    def remove_frame_processor(self, camera_id: int):
-        """Remove frame processor for a camera"""
+    def _create_object_detector(self, config: Dict):
+        """Create an object detection processor"""
+        model_path = config.get('model_path', 'models/yolov5s.pt')
+        confidence = config.get('confidence', 0.5)
+        
+        def process_frame(frame):
+            # Implement object detection
+            # This is a placeholder - implement with your preferred model
+            return frame, []
+            
+        return process_frame
+
+    def _create_motion_detector(self, config: Dict):
+        """Create a motion detection processor"""
+        sensitivity = config.get('sensitivity', 500)
+        blur_size = config.get('blur_size', 21)
+        background_subtractor = cv2.createBackgroundSubtractorMOG2()
+        
+        def process_frame(frame):
+            # Apply preprocessing
+            gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+            blur = cv2.GaussianBlur(gray, (blur_size, blur_size), 0)
+            
+            # Detect motion
+            mask = background_subtractor.apply(blur)
+            contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+            
+            motion_detected = False
+            motion_regions = []
+            
+            for contour in contours:
+                if cv2.contourArea(contour) > sensitivity:
+                    motion_detected = True
+                    x, y, w, h = cv2.boundingRect(contour)
+                    motion_regions.append({
+                        'x': x, 'y': y, 'width': w, 'height': h,
+                        'area': cv2.contourArea(contour)
+                    })
+            
+            return frame, {
+                'motion_detected': motion_detected,
+                'regions': motion_regions
+            }
+            
+        return process_frame
+
+    async def _process_frame(self, camera_id: int, frame: np.ndarray) -> Tuple[np.ndarray, List[Dict]]:
+        """Process a frame through all registered processors"""
+        processed_frame = frame.copy()
+        results = []
+        
         if camera_id in self.frame_processors:
-            del self.frame_processors[camera_id]
+            for processor in self.frame_processors[camera_id]:
+                try:
+                    processed_frame, result = processor['processor'](processed_frame)
+                    if result:
+                        results.append({
+                            'type': processor['type'],
+                            'result': result
+                        })
+                except Exception as e:
+                    logger.error(f"Error in frame processor {processor['type']}: {str(e)}")
+        
+        return processed_frame, results
 
     async def get_camera_status(self, camera_id: int) -> Dict:
         """Get current status of a camera"""

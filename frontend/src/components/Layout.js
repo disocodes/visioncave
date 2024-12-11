@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import {
   Box,
   Drawer,
@@ -12,8 +12,7 @@ import {
   ListItemIcon,
   ListItemText,
   ListItemButton,
-  Menu,
-  MenuItem,
+  Collapse,
 } from '@mui/material';
 import {
   Menu as MenuIcon,
@@ -23,55 +22,41 @@ import {
   ModelTraining as ModelIcon,
   Settings as SettingsIcon,
   ChevronLeft as ChevronLeftIcon,
-  Home as HomeIcon,
 } from '@mui/icons-material';
 
 const drawerWidth = 240;
 
-const Layout = ({ children }) => {
+const menuItems = [
+  { text: 'Dashboard', icon: <DashboardIcon />, path: '/' },
+  { 
+    text: 'Task Management', 
+    icon: <BuildIcon />, 
+    path: '/task-management',
+    subItems: [
+      { text: 'Widget Builder', icon: <BuildIcon />, path: '/widget-builder' }
+    ]
+  },
+  { text: 'Camera Management', icon: <VideocamIcon />, path: '/camera-management' },
+  { text: 'Models', icon: <ModelIcon />, path: '/models' },
+  { text: 'Settings', icon: <SettingsIcon />, path: '/settings' },
+];
+
+const Layout = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [open, setOpen] = useState(true);
-  const [moduleMenuAnchor, setModuleMenuAnchor] = useState(null);
 
   const handleDrawerToggle = () => {
     setOpen(!open);
   };
 
-  const handleModuleMenuOpen = (event) => {
-    setModuleMenuAnchor(event.currentTarget);
-  };
-
-  const handleModuleMenuClose = () => {
-    setModuleMenuAnchor(null);
-  };
-
-  const handleModuleSelect = (moduleId) => {
-    navigate(`/dashboard/vision/${moduleId}`);
-    handleModuleMenuClose();
-  };
-
-  const menuItems = [
-    { text: 'Home', icon: <HomeIcon />, path: '/', exact: true },
-    { 
-      text: 'Dashboard', 
-      icon: <DashboardIcon />, 
-      onClick: handleModuleMenuOpen,
-      selected: location.pathname.startsWith('/dashboard/vision/')
-    },
-    { text: 'Widget Builder', icon: <BuildIcon />, path: '/widget-builder' },
-    { text: 'Camera Management', icon: <VideocamIcon />, path: '/camera-management' },
-    { text: 'Models', icon: <ModelIcon />, path: '/models' },
-    { text: 'Settings', icon: <SettingsIcon />, path: '/settings' },
-  ];
-
   return (
-    <Box sx={{ display: 'flex', minHeight: '100vh' }}>
+    <Box sx={{ display: 'flex' }}>
       <AppBar
         position="fixed"
         sx={{
           zIndex: (theme) => theme.zIndex.drawer + 1,
-          backgroundColor: '#1a1a1a',
+          backgroundColor: 'background.paper',
         }}
       >
         <Toolbar>
@@ -84,12 +69,11 @@ const Layout = ({ children }) => {
           >
             {open ? <ChevronLeftIcon /> : <MenuIcon />}
           </IconButton>
-          <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-            VisionCave
+          <Typography variant="h6" noWrap component="div">
+            VisionCave Dashboard
           </Typography>
         </Toolbar>
       </AppBar>
-
       <Drawer
         variant="permanent"
         sx={{
@@ -98,67 +82,50 @@ const Layout = ({ children }) => {
           '& .MuiDrawer-paper': {
             width: drawerWidth,
             boxSizing: 'border-box',
-            backgroundColor: '#1a1a1a',
-            color: 'white',
-            borderRight: '1px solid rgba(255, 255, 255, 0.12)',
-            transform: open ? 'translateX(0)' : `translateX(-${drawerWidth}px)`,
-            transition: 'transform 0.3s ease-in-out',
+            ...(open ? {} : { transform: 'translateX(-180px)' }),
+            transition: 'transform 0.2s',
           },
         }}
       >
         <Toolbar />
-        <Box sx={{ overflow: 'auto', mt: 2 }}>
+        <Box sx={{ overflow: 'auto' }}>
           <List>
             {menuItems.map((item) => (
-              <ListItem key={item.text} disablePadding>
-                <ListItemButton
-                  onClick={item.onClick || (() => navigate(item.path))}
-                  selected={item.selected || location.pathname === item.path}
-                  sx={{
-                    '&.Mui-selected': {
-                      backgroundColor: 'rgba(255, 255, 255, 0.08)',
-                    },
-                    '&:hover': {
-                      backgroundColor: 'rgba(255, 255, 255, 0.12)',
-                    },
-                  }}
-                >
-                  <ListItemIcon sx={{ color: 'white' }}>
-                    {item.icon}
-                  </ListItemIcon>
-                  <ListItemText primary={item.text} />
-                </ListItemButton>
-              </ListItem>
+              <React.Fragment key={item.text}>
+                <ListItem disablePadding>
+                  <ListItemButton
+                    selected={location.pathname === item.path}
+                    onClick={() => navigate(item.path)}
+                  >
+                    <ListItemIcon>{item.icon}</ListItemIcon>
+                    <ListItemText primary={item.text} />
+                  </ListItemButton>
+                </ListItem>
+                {item.subItems && (
+                  <Collapse in={location.pathname.startsWith(item.path)} timeout="auto" unmountOnExit>
+                    <List component="div" disablePadding>
+                      {item.subItems.map((subItem) => (
+                        <ListItem key={subItem.text} disablePadding sx={{ pl: 4 }}>
+                          <ListItemButton
+                            selected={location.pathname === subItem.path}
+                            onClick={() => navigate(subItem.path)}
+                          >
+                            <ListItemIcon>{subItem.icon}</ListItemIcon>
+                            <ListItemText primary={subItem.text} />
+                          </ListItemButton>
+                        </ListItem>
+                      ))}
+                    </List>
+                  </Collapse>
+                )}
+              </React.Fragment>
             ))}
           </List>
         </Box>
       </Drawer>
-
-      <Menu
-        anchorEl={moduleMenuAnchor}
-        open={Boolean(moduleMenuAnchor)}
-        onClose={handleModuleMenuClose}
-        sx={{ mt: 1 }}
-      >
-        <MenuItem onClick={() => handleModuleSelect('residential')}>Residential</MenuItem>
-        <MenuItem onClick={() => handleModuleSelect('school')}>School</MenuItem>
-        <MenuItem onClick={() => handleModuleSelect('hospital')}>Hospital</MenuItem>
-        <MenuItem onClick={() => handleModuleSelect('mine')}>Mine Site</MenuItem>
-        <MenuItem onClick={() => handleModuleSelect('traffic')}>Traffic</MenuItem>
-      </Menu>
-
-      <Box
-        component="main"
-        sx={{
-          flexGrow: 1,
-          p: 3,
-          backgroundColor: '#121212',
-          color: 'white',
-          minHeight: '100vh',
-        }}
-      >
+      <Box component="main" sx={{ flexGrow: 1, p: 3 }}>
         <Toolbar />
-        {children}
+        <Outlet />
       </Box>
     </Box>
   );

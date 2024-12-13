@@ -35,16 +35,19 @@ import {
   VisibilityOff as VisibilityOffIcon,
 } from '@mui/icons-material';
 import { Stage, Layer, Line, Circle } from 'react-konva';
+import { addZone, updateZone, removeZone } from '../../store/slices/widgetDataSlice';
 
 const ZoneManagementWidget = () => {
   const dispatch = useDispatch();
-  const zones = useSelector((state) => state.widgetData.zones);
+  const zones = useSelector((state) => state.widgetData.zones) || [];
+  const containerRef = useRef(null);
   const videoRef = useRef(null);
   
   const [selectedZone, setSelectedZone] = useState(null);
   const [isDrawing, setIsDrawing] = useState(false);
   const [points, setPoints] = useState([]);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [stageDimensions, setStageDimensions] = useState({ width: 640, height: 480 }); // Safe default
   const [zoneConfig, setZoneConfig] = useState({
     name: '',
     type: 'monitoring',
@@ -73,21 +76,26 @@ const ZoneManagementWidget = () => {
     
     const stage = e.target.getStage();
     const point = stage.getPointerPosition();
-    setPoints([...points, point.x, point.y]);
+    if (point) {
+      setPoints([...points, point.x, point.y]);
+    }
   };
 
   const handleZoneSelect = (zone) => {
+    if (!zone) return;
     setSelectedZone(zone);
-    setPoints(zone.points);
+    setPoints(zone.points || []);
     setZoneConfig({
-      name: zone.name,
-      type: zone.type,
-      rules: zone.rules,
-      active: zone.active,
+      name: zone.name || '',
+      type: zone.type || 'monitoring',
+      rules: zone.rules || [],
+      active: zone.active ?? true,
     });
   };
 
   const handleSaveZone = () => {
+    if (!zoneConfig.name) return;
+    
     const newZone = {
       id: selectedZone?.id || Date.now().toString(),
       name: zoneConfig.name,
@@ -97,12 +105,13 @@ const ZoneManagementWidget = () => {
       active: zoneConfig.active,
     };
 
-    dispatch(selectedZone ? updateZone(newZone) : createZone(newZone));
+    dispatch(selectedZone ? updateZone(newZone) : addZone(newZone));
     handleCloseDialog();
   };
 
   const handleDeleteZone = (zoneId) => {
-    dispatch(deleteZone(zoneId));
+    if (!zoneId) return;
+    dispatch(removeZone(zoneId));
   };
 
   const handleCloseDialog = () => {
@@ -118,8 +127,39 @@ const ZoneManagementWidget = () => {
   };
 
   const handleToggleZone = (zone) => {
+    if (!zone) return;
     dispatch(updateZone({ ...zone, active: !zone.active }));
   };
+
+  useEffect(() => {
+    const updateStageDimensions = () => {
+      if (containerRef.current) {
+        const { clientWidth, clientHeight } = containerRef.current;
+        if (clientWidth && clientHeight) {
+          setStageDimensions({
+            width: clientWidth,
+            height: clientHeight
+          });
+        }
+      }
+    };
+
+    // Initial update
+    updateStageDimensions();
+
+    // Add resize observer
+    const resizeObserver = new ResizeObserver(updateStageDimensions);
+    if (containerRef.current) {
+      resizeObserver.observe(containerRef.current);
+    }
+
+    // Cleanup
+    return () => {
+      if (containerRef.current) {
+        resizeObserver.unobserve(containerRef.current);
+      }
+    };
+  }, []);
 
   return (
     <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
@@ -151,7 +191,7 @@ const ZoneManagementWidget = () => {
                           sx={{ mr: 1 }}
                         />
                         <Chip
-                          label={`${zone.rules.length} rules`}
+                          label={`${zone.rules?.length || 0} rules`}
                           size="small"
                         />
                       </Box>
@@ -189,6 +229,7 @@ const ZoneManagementWidget = () => {
           {/* Zone Preview */}
           <Grid item xs={8}>
             <Box
+              ref={containerRef}
               sx={{
                 width: '100%',
                 height: 400,
@@ -204,43 +245,47 @@ const ZoneManagementWidget = () => {
                   objectFit: 'cover',
                 }}
               />
-              <Stage
-                width={videoRef.current?.clientWidth || 800}
-                height={videoRef.current?.clientHeight || 600}
-                onClick={handleStageClick}
-                style={{ position: 'absolute', top: 0, left: 0 }}
-              >
-                <Layer>
-                  {zones.map((zone) => (
-                    <Line
-                      key={zone.id}
-                      points={zone.points}
-                      closed
-                      stroke={zone.active ? '#2196f3' : '#bdbdbd'}
-                      fill={zone.active ? '#2196f320' : '#bdbdbd20'}
-                    />
-                  ))}
-                  {points.length > 0 && (
-                    <Line
-                      points={points}
-                      closed
-                      stroke="#4caf50"
-                      fill="#4caf5020"
-                    />
-                  )}
-                  {points.map((point, i) => (
-                    i % 2 === 0 && (
-                      <Circle
-                        key={i}
-                        x={point}
-                        y={points[i + 1]}
-                        radius={4}
-                        fill="#4caf50"
+              {stageDimensions.width > 0 && stageDimensions.height > 0 && (
+                <Stage
+                  width={stageDimensions.width}
+                  height={stageDimensions.height}
+                  onClick={handleStageClick}
+                  style={{ position: 'absolute', top: 0, left: 0 }}
+                >
+                  <Layer>
+                    {zones.map((zone) => (
+                      zone.points && zone.points.length > 0 && (
+                        <Line
+                          key={zone.id}
+                          points={zone.points}
+                          closed
+                          stroke={zone.active ? '#2196f3' : '#bdbdbd'}
+                          fill={zone.active ? '#2196f320' : '#bdbdbd20'}
+                        />
+                      )
+                    ))}
+                    {points.length > 0 && (
+                      <Line
+                        points={points}
+                        closed
+                        stroke="#4caf50"
+                        fill="#4caf5020"
                       />
-                    )
-                  ))}
-                </Layer>
-              </Stage>
+                    )}
+                    {points.map((point, i) => (
+                      i % 2 === 0 && (
+                        <Circle
+                          key={i}
+                          x={point}
+                          y={points[i + 1]}
+                          radius={4}
+                          fill="#4caf50"
+                        />
+                      )
+                    ))}
+                  </Layer>
+                </Stage>
+              )}
             </Box>
           </Grid>
         </Grid>

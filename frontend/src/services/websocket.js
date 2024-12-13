@@ -7,7 +7,7 @@ class WebSocketService {
     this.reconnectTimeout = 3000;
   }
 
-  connect(url = 'ws://localhost:8000/ws') {
+  connect(url = `ws://${window.location.hostname}:8000/api/v1/ws`) {
     return new Promise((resolve, reject) => {
       try {
         this.ws = new WebSocket(url);
@@ -19,11 +19,15 @@ class WebSocketService {
         };
 
         this.ws.onmessage = (event) => {
-          const data = JSON.parse(event.data);
-          const { type, payload } = data;
-          
-          if (this.subscribers.has(type)) {
-            this.subscribers.get(type).forEach(callback => callback(payload));
+          try {
+            const data = JSON.parse(event.data);
+            const { type, payload } = data;
+            
+            if (this.subscribers.has(type)) {
+              this.subscribers.get(type).forEach(callback => callback(payload));
+            }
+          } catch (error) {
+            console.error('Error parsing WebSocket message:', error);
           }
         };
 
@@ -60,16 +64,22 @@ class WebSocketService {
 
     return () => {
       const callbacks = this.subscribers.get(type);
-      callbacks.delete(callback);
-      if (callbacks.size === 0) {
-        this.subscribers.delete(type);
+      if (callbacks) {
+        callbacks.delete(callback);
+        if (callbacks.size === 0) {
+          this.subscribers.delete(type);
+        }
       }
     };
   }
 
   send(type, payload) {
     if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-      this.ws.send(JSON.stringify({ type, payload }));
+      try {
+        this.ws.send(JSON.stringify({ type, payload }));
+      } catch (error) {
+        console.error('Error sending WebSocket message:', error);
+      }
     } else {
       console.error('WebSocket is not connected');
     }

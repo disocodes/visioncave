@@ -4,7 +4,6 @@ import {
   Box,
   Card,
   CardContent,
-  CardMedia,
   Typography,
   Grid,
   Container,
@@ -22,35 +21,35 @@ const modules = [
     title: 'Residential Vision',
     description: 'Smart monitoring and security for residential areas',
     icon: HomeIcon,
-    image: '/images/residential.jpg',
+    path: '/residential',
   },
   {
     id: 'school',
     title: 'School Vision',
     description: 'Ensuring safety and efficiency in educational environments',
     icon: SchoolIcon,
-    image: '/images/school.jpg',
+    path: '/school',
   },
   {
     id: 'hospital',
     title: 'Hospital Vision',
     description: 'Advanced monitoring for healthcare facilities',
     icon: LocalHospitalIcon,
-    image: '/images/hospital.jpg',
+    path: '/hospital',
   },
   {
     id: 'mine',
     title: 'Mine Site Vision',
     description: 'Safety and operations monitoring for mining sites',
     icon: ConstructionIcon,
-    image: '/images/mine.jpg',
+    path: '/mine',
   },
   {
     id: 'traffic',
     title: 'Traffic Vision',
     description: 'Smart traffic monitoring and analysis',
     icon: TrafficIcon,
-    image: '/images/traffic.jpg',
+    path: '/traffic',
   },
 ];
 
@@ -58,8 +57,8 @@ const LandingPage = () => {
   const theme = useTheme();
   const navigate = useNavigate();
 
-  const handleModuleClick = (moduleId) => {
-    navigate(`/dashboard/vision/${moduleId}`);
+  const handleModuleClick = (path) => {
+    navigate(path);
   };
 
   return (
@@ -106,7 +105,7 @@ const LandingPage = () => {
                     backgroundColor: theme.palette.background.paper,
                     borderRadius: 2,
                   }}
-                  onClick={() => handleModuleClick(module.id)}
+                  onClick={() => handleModuleClick(module.path)}
                 >
                   <Box
                     sx={{

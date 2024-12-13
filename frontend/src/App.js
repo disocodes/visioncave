@@ -2,16 +2,18 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
-import Layout from './components/Layout';
 import LandingPage from './pages/LandingPage';
-import Dashboard from './pages/Dashboard';
-import WidgetBuilder from './pages/WidgetBuilder';
+import WidgetBuilder from './components/WidgetBuilder/WidgetEditor';
 import CameraManagement from './pages/CameraManagement';
 import Models from './pages/ModelsPage';
 import Settings from './pages/Settings';
-import ModuleSelection from './pages/ModuleSelection';
 import SiteManagement from './pages/SiteManagement';
 import UserManagement from './pages/UserManagement';
+import ResidentialVision from './pages/modules/ResidentialVision';
+import SchoolVision from './pages/modules/SchoolVision';
+import HospitalVision from './pages/modules/HospitalVision';
+import MineSiteVision from './pages/modules/MineSiteVision';
+import TrafficVision from './pages/modules/TrafficVision';
 import { AuthProvider } from './contexts/AuthContext';
 import { SiteProvider } from './contexts/SiteContext';
 import { CameraProvider } from './contexts/CameraContext';
@@ -57,17 +59,25 @@ function App() {
               <WidgetProvider>
                 <Router>
                   <Routes>
-                    <Route path="/login" element={<LandingPage />} />
-                    <Route element={<Layout />}>
-                      <Route path="/" element={<ModuleSelection />} />
-                      <Route path="/module/:moduleType" element={<Dashboard />} />
-                      <Route path="/widget-builder" element={<WidgetBuilder />} />
-                      <Route path="/camera-management" element={<CameraManagement />} />
-                      <Route path="/site-management" element={<SiteManagement />} />
-                      <Route path="/user-management" element={<UserManagement />} />
-                      <Route path="/models" element={<Models />} />
-                      <Route path="/settings" element={<Settings />} />
-                    </Route>
+                    {/* Main routes */}
+                    <Route path="/" element={<LandingPage />} />
+                    
+                    {/* Module routes */}
+                    <Route path="/residential" element={<ResidentialVision />} />
+                    <Route path="/school" element={<SchoolVision />} />
+                    <Route path="/hospital" element={<HospitalVision />} />
+                    <Route path="/mine" element={<MineSiteVision />} />
+                    <Route path="/traffic" element={<TrafficVision />} />
+                    
+                    {/* Utility routes */}
+                    <Route path="/widget-builder" element={<WidgetBuilder />} />
+                    <Route path="/camera-management" element={<CameraManagement />} />
+                    <Route path="/site-management" element={<SiteManagement />} />
+                    <Route path="/user-management" element={<UserManagement />} />
+                    <Route path="/models" element={<Models />} />
+                    <Route path="/settings" element={<Settings />} />
+                    
+                    {/* Fallback route */}
                     <Route path="*" element={<Navigate to="/" replace />} />
                   </Routes>
                 </Router>

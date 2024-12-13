@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
 import uvicorn
+from app.api.v1.endpoints import cameras, school, widgets, websockets
 
 app = FastAPI(
     title="Visioncave API",
@@ -25,6 +26,12 @@ Path("models").mkdir(exist_ok=True)
 
 # Mount static files
 app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
+
+# Include API routes
+app.include_router(cameras.router, prefix="/api/v1/cameras", tags=["cameras"])
+app.include_router(school.router, prefix="/api/v1/school", tags=["school"])
+app.include_router(widgets.router, prefix="/api/v1/widgets", tags=["widgets"])
+app.include_router(websockets.router, prefix="/api/v1/ws", tags=["websockets"])
 
 @app.get("/")
 async def root():

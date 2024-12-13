@@ -15,6 +15,7 @@ import {
   CheckCircle as CheckCircleIcon,
 } from '@mui/icons-material';
 import { useAnalytics } from '../../../contexts/AnalyticsContext';
+import BaseWidget from '../BaseWidget';
 
 const PatientMonitorWidget = () => {
   const { analytics, loading } = useAnalytics();
@@ -47,17 +48,30 @@ const PatientMonitorWidget = () => {
     }
   };
 
-  if (loading) {
-    return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
-        <CircularProgress />
-      </Box>
-    );
-  }
+  const renderContent = () => {
+    if (loading) {
+      return (
+        <Box sx={{ 
+          display: 'flex', 
+          justifyContent: 'center', 
+          alignItems: 'center',
+          height: '100%',
+          minHeight: '200px'
+        }}>
+          <CircularProgress />
+        </Box>
+      );
+    }
 
-  return (
-    <Box>
-      <List dense>
+    return (
+      <List 
+        dense 
+        sx={{ 
+          maxHeight: '100%',
+          overflow: 'auto',
+          py: 0
+        }}
+      >
         {patientData.map((patient) => (
           <ListItem
             key={patient.id}
@@ -65,27 +79,59 @@ const PatientMonitorWidget = () => {
               mb: 1,
               bgcolor: 'background.paper',
               borderRadius: 1,
+              boxShadow: 1,
               '&:hover': {
                 bgcolor: 'action.hover',
               },
+              '&:last-child': {
+                mb: 0
+              }
             }}
           >
             <ListItemIcon>
               {getStatusIcon(patient.status)}
             </ListItemIcon>
             <ListItemText
-              primary={patient.name}
-              secondary={`Room ${patient.room} - ${patient.condition}`}
+              primary={
+                <Typography variant="subtitle2" component="div">
+                  {patient.name}
+                </Typography>
+              }
+              secondary={
+                <Typography variant="body2" color="text.secondary">
+                  Room {patient.room} - {patient.condition}
+                </Typography>
+              }
             />
             <Chip
               label={patient.status.toUpperCase()}
               color={getStatusColor(patient.status)}
               size="small"
+              sx={{ ml: 1 }}
             />
           </ListItem>
         ))}
       </List>
-    </Box>
+    );
+  };
+
+  return (
+    <BaseWidget
+      title="Patient Monitor"
+      summary={
+        <Typography variant="body2" color="text.secondary">
+          Monitoring {patientData.length} patients
+        </Typography>
+      }
+    >
+      <Box sx={{ 
+        height: '100%',
+        display: 'flex',
+        flexDirection: 'column'
+      }}>
+        {renderContent()}
+      </Box>
+    </BaseWidget>
   );
 };
 

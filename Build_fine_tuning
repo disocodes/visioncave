@@ -8,14 +8,14 @@ Rename widget Builder to Task and Flow Management
   - Create the arena settings include bring own cloud storage like google drive, aws or nextcloud option
   - rules for how long videos can be kept, to achieve or delete
   *check that this functionality is mapped to the backend service
-Widget sizes and layout and functionality
+Widget sizes and layout and functionality for all modules
 - Make widgets deletable
 - Create front face of widget with just sumnmaries and extra detail and tools when expanded
 - Make live Camera feed widget exampndable and when expanded will have tools like tools or flows built from the task builder to include filter tools that can be drawn on the live video
-  feed i.e line for counting objects, regions to focus on in feed and etc. The widget dashboard should also have configurable vlm tools with option to choose self hosted models, inlcude
+  feed i.e line for counting objects, regions to focus on in feed (add or tools from loaded models i.e opencv tools, yolov tools, custom tools built in the tool builder etc). The widget dashboard should also have configurable vlm tools with option to choose self hosted models, inlcude
   buttons to open recordings from the recording folder 
 *check that this functionality is mapped to the backend service
 
 Navigation Buttons
-Check all dashboards and pages and include navigation buttons like back to go back to previous page
+Check all dashboards and pages and include navigation buttons like back to go back to previous page. This could be the module icon in the top of the naviagtion pane 
 

@@ -1,4 +1,5 @@
 import React, { useState, useCallback } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import ReactFlow, {
   addEdge,
   MiniMap,
@@ -23,6 +24,10 @@ import {
   DialogContent,
   DialogActions,
   TextField,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
 } from '@mui/material';
 import {
   VideoCamera,
@@ -39,12 +44,16 @@ const nodeTypes = {
   customNode: CustomNode,
 };
 
-const WidgetEditor = () => {
+const TaskFlowEditor = ({ type = 'widget' }) => {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const editorType = location.pathname === '/task-builder' ? 'task' : 'widget';
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [libraryOpen, setLibraryOpen] = useState(true);
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
-  const [widgetName, setWidgetName] = useState('');
+  const [name, setName] = useState('');
+  const [targetType, setTargetType] = useState('dashboard'); // 'dashboard' or 'camera-feed'
   const { enqueueSnackbar } = useSnackbar();
 
   const onConnect = useCallback(
@@ -86,32 +95,34 @@ const WidgetEditor = () => {
   );
 
   const handleSave = async () => {
-    if (!widgetName.trim()) {
-      enqueueSnackbar('Please enter a widget name', { variant: 'warning' });
+    if (!name.trim()) {
+      enqueueSnackbar(`Please enter a ${editorType} name`, { variant: 'warning' });
       return;
     }
 
     try {
-      const widgetConfig = {
-        name: widgetName,
+      const config = {
+        name,
+        type: editorType,
+        targetType: editorType === 'task' ? targetType : 'dashboard',
         nodes,
         edges,
         createdAt: new Date().toISOString(),
       };
 
-      // Save widget configuration
-      await fetch('/api/widgets', {
+      // Save configuration
+      await fetch(`/api/${editorType}s`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(widgetConfig),
+        body: JSON.stringify(config),
       });
 
-      enqueueSnackbar('Widget saved successfully', { variant: 'success' });
+      enqueueSnackbar(`${editorType} saved successfully`, { variant: 'success' });
       setSaveDialogOpen(false);
     } catch (error) {
-      enqueueSnackbar('Error saving widget', { variant: 'error' });
+      enqueueSnackbar(`Error saving ${editorType}`, { variant: 'error' });
     }
   };
 
@@ -136,7 +147,7 @@ const WidgetEditor = () => {
           },
         }}
       >
-        <NodeLibrary />
+        <NodeLibrary editorType={editorType} />
       </Drawer>
 
       <Box sx={{ flexGrow: 1, p: 3 }}>
@@ -148,14 +159,18 @@ const WidgetEditor = () => {
           }}
         >
           <Box sx={{ p: 2, borderBottom: 1, borderColor: 'divider' }}>
-            <Typography variant="h6">Widget Editor</Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+              <Typography variant="h6">
+                {editorType === 'task' ? 'Task Builder' : 'Widget Builder'}
+              </Typography>
+            </Box>
             <Box sx={{ mt: 1 }}>
               <Button
                 variant="contained"
                 onClick={() => setSaveDialogOpen(true)}
                 sx={{ mr: 1 }}
               >
-                Save Widget
+                Save {editorType === 'task' ? 'Task' : 'Widget'}
               </Button>
               <Button
                 variant="outlined"
@@ -190,16 +205,31 @@ const WidgetEditor = () => {
         open={saveDialogOpen}
         onClose={() => setSaveDialogOpen(false)}
       >
-        <DialogTitle>Save Widget</DialogTitle>
+        <DialogTitle>
+          Save {editorType === 'task' ? 'Task' : 'Widget'}
+        </DialogTitle>
         <DialogContent>
           <TextField
             autoFocus
             margin="dense"
-            label="Widget Name"
+            label={`${editorType === 'task' ? 'Task' : 'Widget'} Name`}
             fullWidth
-            value={widgetName}
-            onChange={(e) => setWidgetName(e.target.value)}
+            value={name}
+            onChange={(e) => setName(e.target.value)}
           />
+          {editorType === 'task' && (
+            <FormControl fullWidth margin="dense">
+              <InputLabel>Target Type</InputLabel>
+              <Select
+                value={targetType}
+                onChange={(e) => setTargetType(e.target.value)}
+                label="Target Type"
+              >
+                <MenuItem value="dashboard">Dashboard Widget</MenuItem>
+                <MenuItem value="camera-feed">Camera Feed</MenuItem>
+              </Select>
+            </FormControl>
+          )}
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setSaveDialogOpen(false)}>Cancel</Button>
@@ -210,4 +240,4 @@ const WidgetEditor = () => {
   );
 };
 
-export default WidgetEditor;
+export default TaskFlowEditor;

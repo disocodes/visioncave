@@ -13,7 +13,7 @@ import {
 import {
   Edit as EditIcon,
   Delete as DeleteIcon,
-  VideoCam as VideoCamIcon,
+  Videocam as VideoCamIcon,
   LocationOn as LocationIcon,
   Circle as CircleIcon,
 } from '@mui/icons-material';

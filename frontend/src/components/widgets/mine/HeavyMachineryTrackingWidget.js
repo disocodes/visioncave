@@ -1,12 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Card,
-  CardContent,
   Typography,
   Grid,
   Box,
   Paper,
-  IconButton,
   Button,
   Chip,
   List,
@@ -42,6 +39,7 @@ import {
 import { useSelector, useDispatch } from 'react-redux';
 import { Line, Scatter } from 'react-chartjs-2';
 import { defaultOptions } from '../../../config/chartConfig';
+import BaseWidget from '../BaseWidget';
 
 const HeavyMachineryTrackingWidget = () => {
   const dispatch = useDispatch();
@@ -171,255 +169,258 @@ const HeavyMachineryTrackingWidget = () => {
     },
   };
 
+  const summary = (
+    <Typography variant="body2" color="textSecondary">
+      {machineryData.activeVehicles} active vehicles | {machineryData.alerts} alerts
+    </Typography>
+  );
+
   return (
-    <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-      <CardContent>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-          <Typography variant="h6">Heavy Machinery Tracking</Typography>
-          <Box>
-            <FormControl size="small" sx={{ mr: 1, minWidth: 120 }}>
-              <InputLabel>Zone</InputLabel>
-              <Select
-                value={selectedZone}
-                onChange={(e) => setSelectedZone(e.target.value)}
-                label="Zone"
-              >
-                <MenuItem value="all">All Zones</MenuItem>
-                <MenuItem value="zoneA">Zone A</MenuItem>
-                <MenuItem value="zoneB">Zone B</MenuItem>
-                <MenuItem value="zoneC">Zone C</MenuItem>
-              </Select>
-            </FormControl>
-            <IconButton onClick={() => setSettingsOpen(true)}>
-              <SettingsIcon />
-            </IconButton>
-          </Box>
-        </Box>
+    <BaseWidget
+      title="Heavy Machinery Tracking"
+      summary={summary}
+      configurable={true}
+      onSettings={() => setSettingsOpen(true)}
+    >
+      <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
+        <FormControl size="small" sx={{ minWidth: 120 }}>
+          <InputLabel>Zone</InputLabel>
+          <Select
+            value={selectedZone}
+            onChange={(e) => setSelectedZone(e.target.value)}
+            label="Zone"
+          >
+            <MenuItem value="all">All Zones</MenuItem>
+            <MenuItem value="zoneA">Zone A</MenuItem>
+            <MenuItem value="zoneB">Zone B</MenuItem>
+            <MenuItem value="zoneC">Zone C</MenuItem>
+          </Select>
+        </FormControl>
+      </Box>
 
-        <Grid container spacing={3}>
-          {/* Summary Cards */}
-          <Grid item xs={12} sm={6} md={3}>
-            <Paper sx={{ p: 2, textAlign: 'center' }}>
-              <Typography variant="subtitle2" gutterBottom>
-                Active Vehicles
-              </Typography>
-              <Typography variant="h4">
-                {machineryData.activeVehicles}/{machineryData.totalVehicles}
-              </Typography>
-              <ConstructionIcon
-                sx={{ fontSize: 40, color: 'primary.main', mt: 1 }}
-              />
-            </Paper>
-          </Grid>
-          <Grid item xs={12} sm={6} md={3}>
-            <Paper sx={{ p: 2, textAlign: 'center' }}>
-              <Typography variant="subtitle2" gutterBottom>
-                Active Alerts
-              </Typography>
-              <Typography variant="h4" color="warning.main">
-                {machineryData.alerts}
-              </Typography>
-              <WarningIcon sx={{ fontSize: 40, color: 'warning.main', mt: 1 }} />
-            </Paper>
-          </Grid>
-          <Grid item xs={12} sm={6} md={3}>
-            <Paper sx={{ p: 2, textAlign: 'center' }}>
-              <Typography variant="subtitle2" gutterBottom>
-                Fuel Efficiency
-              </Typography>
-              <Typography variant="h4">{machineryData.fuelEfficiency}%</Typography>
-              <FuelIcon sx={{ fontSize: 40, color: 'success.main', mt: 1 }} />
-            </Paper>
-          </Grid>
-          <Grid item xs={12} sm={6} md={3}>
-            <Paper sx={{ p: 2, textAlign: 'center' }}>
-              <Typography variant="subtitle2" gutterBottom>
-                Average Speed
-              </Typography>
-              <Typography variant="h4">15 km/h</Typography>
-              <SpeedIcon sx={{ fontSize: 40, color: 'info.main', mt: 1 }} />
-            </Paper>
-          </Grid>
-
-          {/* Vehicle Locations */}
-          <Grid item xs={12} md={8}>
-            <Paper sx={{ p: 2 }}>
-              <Typography variant="subtitle2" gutterBottom>
-                Vehicle Locations
-              </Typography>
-              <Box sx={{ height: 400 }}>
-                <Scatter
-                  data={vehicleLocationData}
-                  options={scatterOptions}
-                />
-              </Box>
-            </Paper>
-          </Grid>
-
-          {/* Efficiency Trend */}
-          <Grid item xs={12} md={4}>
-            <Paper sx={{ p: 2 }}>
-              <Typography variant="subtitle2" gutterBottom>
-                Efficiency Trend
-              </Typography>
-              <Box sx={{ height: 400 }}>
-                <Line
-                  data={efficiencyTrendData}
-                  options={lineOptions}
-                />
-              </Box>
-            </Paper>
-          </Grid>
-
-          {/* Vehicle List */}
-          <Grid item xs={12} md={6}>
-            <Paper sx={{ p: 2 }}>
-              <Typography variant="subtitle2" gutterBottom>
-                Vehicle Status
-              </Typography>
-              <List>
-                {machineryData.vehicles.map((vehicle) => (
-                  <ListItem
-                    key={vehicle.id}
-                    button
-                    onClick={() => handleVehicleClick(vehicle)}
-                  >
-                    <ListItemIcon>
-                      <Avatar sx={{ bgcolor: 'primary.main' }}>
-                        {vehicle.type.charAt(0)}
-                      </Avatar>
-                    </ListItemIcon>
-                    <ListItemText
-                      primary={`${vehicle.id} - ${vehicle.type}`}
-                      secondary={
-                        <React.Fragment>
-                          <Typography
-                            component="span"
-                            variant="body2"
-                            color="text.primary"
-                          >
-                            {vehicle.operator}
-                          </Typography>
-                          {` - ${vehicle.location}`}
-                        </React.Fragment>
-                      }
-                    />
-                    <ListItemSecondaryAction>
-                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                        <Tooltip title="Fuel Level">
-                          <Box sx={{ mr: 1 }}>
-                            <BatteryIcon
-                              color={vehicle.fuel > 20 ? 'success' : 'error'}
-                            />
-                            {vehicle.fuel}%
-                          </Box>
-                        </Tooltip>
-                        <Chip
-                          label={vehicle.status}
-                          color={getStatusColor(vehicle.status)}
-                          size="small"
-                        />
-                      </Box>
-                    </ListItemSecondaryAction>
-                  </ListItem>
-                ))}
-              </List>
-            </Paper>
-          </Grid>
-
-          {/* Recent Events */}
-          <Grid item xs={12} md={6}>
-            <Paper sx={{ p: 2 }}>
-              <Typography variant="subtitle2" gutterBottom>
-                Recent Events
-              </Typography>
-              <List>
-                {machineryData.recentEvents.map((event) => (
-                  <ListItem key={event.id}>
-                    <ListItemIcon>
-                      <WarningIcon color={getStatusColor(event.severity)} />
-                    </ListItemIcon>
-                    <ListItemText
-                      primary={event.details}
-                      secondary={`${event.timestamp} - ${event.vehicle}`}
-                    />
-                    <ListItemSecondaryAction>
-                      <Chip
-                        label={event.severity}
-                        color={getStatusColor(event.severity)}
-                        size="small"
-                      />
-                    </ListItemSecondaryAction>
-                  </ListItem>
-                ))}
-              </List>
-            </Paper>
-          </Grid>
+      <Grid container spacing={3}>
+        {/* Summary Cards */}
+        <Grid item xs={12} sm={6} md={3}>
+          <Paper sx={{ p: 2, textAlign: 'center' }}>
+            <Typography variant="subtitle2" gutterBottom>
+              Active Vehicles
+            </Typography>
+            <Typography variant="h4">
+              {machineryData.activeVehicles}/{machineryData.totalVehicles}
+            </Typography>
+            <ConstructionIcon
+              sx={{ fontSize: 40, color: 'primary.main', mt: 1 }}
+            />
+          </Paper>
+        </Grid>
+        <Grid item xs={12} sm={6} md={3}>
+          <Paper sx={{ p: 2, textAlign: 'center' }}>
+            <Typography variant="subtitle2" gutterBottom>
+              Active Alerts
+            </Typography>
+            <Typography variant="h4" color="warning.main">
+              {machineryData.alerts}
+            </Typography>
+            <WarningIcon sx={{ fontSize: 40, color: 'warning.main', mt: 1 }} />
+          </Paper>
+        </Grid>
+        <Grid item xs={12} sm={6} md={3}>
+          <Paper sx={{ p: 2, textAlign: 'center' }}>
+            <Typography variant="subtitle2" gutterBottom>
+              Fuel Efficiency
+            </Typography>
+            <Typography variant="h4">{machineryData.fuelEfficiency}%</Typography>
+            <FuelIcon sx={{ fontSize: 40, color: 'success.main', mt: 1 }} />
+          </Paper>
+        </Grid>
+        <Grid item xs={12} sm={6} md={3}>
+          <Paper sx={{ p: 2, textAlign: 'center' }}>
+            <Typography variant="subtitle2" gutterBottom>
+              Average Speed
+            </Typography>
+            <Typography variant="h4">15 km/h</Typography>
+            <SpeedIcon sx={{ fontSize: 40, color: 'info.main', mt: 1 }} />
+          </Paper>
         </Grid>
 
-        {/* Settings Dialog */}
-        <Dialog
-          open={settingsOpen}
-          onClose={() => setSettingsOpen(false)}
-          maxWidth="sm"
-          fullWidth
-        >
-          <DialogTitle>Tracking Settings</DialogTitle>
-          <DialogContent>
-            <Grid container spacing={2} sx={{ mt: 1 }}>
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  label="Speed Limit (km/h)"
-                  type="number"
-                  value="25"
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  label="Minimum Fuel Level (%)"
-                  type="number"
-                  value="20"
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  label="Maintenance Interval (hours)"
-                  type="number"
-                  value="100"
-                />
-              </Grid>
-            </Grid>
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={() => setSettingsOpen(false)}>Cancel</Button>
-            <Button variant="contained" onClick={() => setSettingsOpen(false)}>
-              Save Changes
-            </Button>
-          </DialogActions>
-        </Dialog>
+        {/* Vehicle Locations */}
+        <Grid item xs={12} md={8}>
+          <Paper sx={{ p: 2 }}>
+            <Typography variant="subtitle2" gutterBottom>
+              Vehicle Locations
+            </Typography>
+            <Box sx={{ height: 400 }}>
+              <Scatter
+                data={vehicleLocationData}
+                options={scatterOptions}
+              />
+            </Box>
+          </Paper>
+        </Grid>
 
-        <Box
-          sx={{
-            mt: 2,
-            pt: 2,
-            borderTop: 1,
-            borderColor: 'divider',
-            display: 'flex',
-            justifyContent: 'space-between',
-          }}
-        >
-          <Typography variant="body2" color="text.secondary">
-            Last updated: 2 minutes ago
-          </Typography>
-          <Button startIcon={<RefreshIcon />} size="small">
-            Refresh
+        {/* Efficiency Trend */}
+        <Grid item xs={12} md={4}>
+          <Paper sx={{ p: 2 }}>
+            <Typography variant="subtitle2" gutterBottom>
+              Efficiency Trend
+            </Typography>
+            <Box sx={{ height: 400 }}>
+              <Line
+                data={efficiencyTrendData}
+                options={lineOptions}
+              />
+            </Box>
+          </Paper>
+        </Grid>
+
+        {/* Vehicle List */}
+        <Grid item xs={12} md={6}>
+          <Paper sx={{ p: 2 }}>
+            <Typography variant="subtitle2" gutterBottom>
+              Vehicle Status
+            </Typography>
+            <List>
+              {machineryData.vehicles.map((vehicle) => (
+                <ListItem
+                  key={vehicle.id}
+                  button
+                  onClick={() => handleVehicleClick(vehicle)}
+                >
+                  <ListItemIcon>
+                    <Avatar sx={{ bgcolor: 'primary.main' }}>
+                      {vehicle.type.charAt(0)}
+                    </Avatar>
+                  </ListItemIcon>
+                  <ListItemText
+                    primary={`${vehicle.id} - ${vehicle.type}`}
+                    secondary={
+                      <React.Fragment>
+                        <Typography
+                          component="span"
+                          variant="body2"
+                          color="text.primary"
+                        >
+                          {vehicle.operator}
+                        </Typography>
+                        {` - ${vehicle.location}`}
+                      </React.Fragment>
+                    }
+                  />
+                  <ListItemSecondaryAction>
+                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                      <Tooltip title="Fuel Level">
+                        <Box sx={{ mr: 1 }}>
+                          <BatteryIcon
+                            color={vehicle.fuel > 20 ? 'success' : 'error'}
+                          />
+                          {vehicle.fuel}%
+                        </Box>
+                      </Tooltip>
+                      <Chip
+                        label={vehicle.status}
+                        color={getStatusColor(vehicle.status)}
+                        size="small"
+                      />
+                    </Box>
+                  </ListItemSecondaryAction>
+                </ListItem>
+              ))}
+            </List>
+          </Paper>
+        </Grid>
+
+        {/* Recent Events */}
+        <Grid item xs={12} md={6}>
+          <Paper sx={{ p: 2 }}>
+            <Typography variant="subtitle2" gutterBottom>
+              Recent Events
+            </Typography>
+            <List>
+              {machineryData.recentEvents.map((event) => (
+                <ListItem key={event.id}>
+                  <ListItemIcon>
+                    <WarningIcon color={getStatusColor(event.severity)} />
+                  </ListItemIcon>
+                  <ListItemText
+                    primary={event.details}
+                    secondary={`${event.timestamp} - ${event.vehicle}`}
+                  />
+                  <ListItemSecondaryAction>
+                    <Chip
+                      label={event.severity}
+                      color={getStatusColor(event.severity)}
+                      size="small"
+                    />
+                  </ListItemSecondaryAction>
+                </ListItem>
+              ))}
+            </List>
+          </Paper>
+        </Grid>
+      </Grid>
+
+      {/* Settings Dialog */}
+      <Dialog
+        open={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>Tracking Settings</DialogTitle>
+        <DialogContent>
+          <Grid container spacing={2} sx={{ mt: 1 }}>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="Speed Limit (km/h)"
+                type="number"
+                value="25"
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="Minimum Fuel Level (%)"
+                type="number"
+                value="20"
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="Maintenance Interval (hours)"
+                type="number"
+                value="100"
+              />
+            </Grid>
+          </Grid>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setSettingsOpen(false)}>Cancel</Button>
+          <Button variant="contained" onClick={() => setSettingsOpen(false)}>
+            Save Changes
           </Button>
-        </Box>
-      </CardContent>
-    </Card>
+        </DialogActions>
+      </Dialog>
+
+      <Box
+        sx={{
+          mt: 2,
+          pt: 2,
+          borderTop: 1,
+          borderColor: 'divider',
+          display: 'flex',
+          justifyContent: 'space-between',
+        }}
+      >
+        <Typography variant="body2" color="text.secondary">
+          Last updated: 2 minutes ago
+        </Typography>
+        <Button startIcon={<RefreshIcon />} size="small">
+          Refresh
+        </Button>
+      </Box>
+    </BaseWidget>
   );
 };
 

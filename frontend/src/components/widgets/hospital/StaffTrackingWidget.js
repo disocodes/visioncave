@@ -8,9 +8,11 @@ import {
   Tooltip,
   CircularProgress,
   Badge,
+  Chip,
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import { useAnalytics } from '../../../contexts/AnalyticsContext';
+import BaseWidget from '../BaseWidget';
 
 const StyledBadge = styled(Badge)(({ theme, status }) => ({
   '& .MuiBadge-badge': {
@@ -44,66 +46,136 @@ const StyledBadge = styled(Badge)(({ theme, status }) => ({
 const StaffTrackingWidget = () => {
   const { analytics, loading } = useAnalytics();
   const [staffData, setStaffData] = useState([]);
+  const [activeCount, setActiveCount] = useState(0);
 
   useEffect(() => {
     if (analytics.staffTracking) {
-      setStaffData(analytics.staffTracking.staff || []);
+      const staff = analytics.staffTracking.staff || [];
+      setStaffData(staff);
+      setActiveCount(staff.filter(s => s.status === 'active').length);
     }
   }, [analytics]);
 
-  if (loading) {
-    return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
-        <CircularProgress />
-      </Box>
-    );
-  }
+  const renderContent = () => {
+    if (loading) {
+      return (
+        <Box sx={{ 
+          display: 'flex', 
+          justifyContent: 'center', 
+          alignItems: 'center',
+          height: '100%',
+          minHeight: '200px'
+        }}>
+          <CircularProgress />
+        </Box>
+      );
+    }
 
-  return (
-    <Box>
-      <Grid container spacing={2}>
-        {staffData.map((staff) => (
-          <Grid item xs={4} sm={3} md={2} key={staff.id}>
-            <Tooltip
-              title={`${staff.name} - ${staff.role}
+    return (
+      <Box sx={{ height: '100%' }}>
+        <Box sx={{ mb: 2, display: 'flex', gap: 1 }}>
+          <Chip 
+            label={`${activeCount} Active`} 
+            color="success" 
+            size="small" 
+          />
+          <Chip 
+            label={`${staffData.length - activeCount} Away`} 
+            color="warning" 
+            size="small" 
+          />
+        </Box>
+        
+        <Grid 
+          container 
+          spacing={2}
+          sx={{ 
+            maxHeight: 'calc(100% - 40px)',
+            overflow: 'auto',
+            pb: 1
+          }}
+        >
+          {staffData.map((staff) => (
+            <Grid item xs={6} sm={4} md={3} key={staff.id}>
+              <Tooltip
+                title={`${staff.name} - ${staff.role}
 Location: ${staff.location}
 Status: ${staff.status}`}
-              arrow
-            >
-              <Paper
-                elevation={2}
-                sx={{
-                  p: 1,
-                  textAlign: 'center',
-                  '&:hover': {
-                    bgcolor: 'action.hover',
-                  },
-                }}
+                arrow
               >
-                <StyledBadge
-                  overlap="circular"
-                  anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-                  variant="dot"
-                  status={staff.status}
+                <Paper
+                  elevation={1}
+                  sx={{
+                    p: 1.5,
+                    textAlign: 'center',
+                    transition: 'all 0.2s ease',
+                    '&:hover': {
+                      elevation: 3,
+                      bgcolor: 'action.hover',
+                      transform: 'translateY(-2px)',
+                    },
+                  }}
                 >
-                  <Avatar
-                    alt={staff.name}
-                    src={staff.avatar}
-                    sx={{ width: 56, height: 56, mx: 'auto', mb: 1 }}
-                  />
-                </StyledBadge>
-                <Typography variant="body2" noWrap>
-                  {staff.name}
-                </Typography>
-                <Typography variant="caption" color="text.secondary" noWrap>
-                  {staff.role}
-                </Typography>
-              </Paper>
-            </Tooltip>
-          </Grid>
-        ))}
-      </Grid>
-    </Box>
+                  <StyledBadge
+                    overlap="circular"
+                    anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+                    variant="dot"
+                    status={staff.status}
+                  >
+                    <Avatar
+                      alt={staff.name}
+                      src={staff.avatar}
+                      sx={{ 
+                        width: 48, 
+                        height: 48, 
+                        mx: 'auto', 
+                        mb: 1,
+                        bgcolor: staff.avatar ? 'transparent' : 'primary.main'
+                      }}
+                    >
+                      {!staff.avatar && staff.name.charAt(0)}
+                    </Avatar>
+                  </StyledBadge>
+                  <Typography 
+                    variant="body2" 
+                    sx={{ 
+                      fontWeight: 500,
+                      lineHeight: 1.2,
+                      mb: 0.5
+                    }}
+                  >
+                    {staff.name}
+                  </Typography>
+                  <Typography 
+                    variant="caption" 
+                    color="text.secondary" 
+                    sx={{
+                      display: 'block',
+                      lineHeight: 1.2
+                    }}
+                  >
+                    {staff.role}
+                  </Typography>
+                </Paper>
+              </Tooltip>
+            </Grid>
+          ))}
+        </Grid>
+      </Box>
+    );
+  };
+
+  return (
+    <BaseWidget
+      title="Staff Tracking"
+      summary={
+        <Typography variant="body2" color="text.secondary">
+          Tracking {staffData.length} staff members ({activeCount} active)
+        </Typography>
+      }
+    >
+      {renderContent()}
+    </BaseWidget>
   );
 };
 

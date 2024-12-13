@@ -1,7 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
-  Card,
-  CardContent,
   Typography,
   Grid,
   Box,
@@ -23,29 +21,29 @@ import {
   MenuItem,
   FormControl,
   InputLabel,
-  Alert,
-  Tooltip,
-  Switch,
   FormControlLabel,
+  Switch,
 } from '@mui/material';
 import {
   Warning as WarningIcon,
-  PersonOff as PersonOffIcon,
   Group as GroupIcon,
   Speed as SpeedIcon,
   Map as MapIcon,
-  Videocam as VideocamIcon,
   NotificationsActive as AlertIcon,
   Settings as SettingsIcon,
   Refresh as RefreshIcon,
   PlayCircle as PlayIcon,
   PauseCircle as PauseIcon,
+  Shield as ShieldIcon,
+  Videocam as VideocamIcon,
+  VideocamOff as VideocamOffIcon,
+  CameraAlt as CameraIcon,
+  Edit as EditIcon,
 } from '@mui/icons-material';
-import { useSelector, useDispatch } from 'react-redux';
 import { Line, Scatter } from 'react-chartjs-2';
+import BaseWidget from '../BaseWidget';
 
 const PlaygroundSafetyWidget = () => {
-  const dispatch = useDispatch();
   const [safetyData, setSafetyData] = useState({
     currentOccupancy: 45,
     maxCapacity: 60,
@@ -81,11 +79,128 @@ const PlaygroundSafetyWidget = () => {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [monitoringActive, setMonitoringActive] = useState(true);
   const [selectedCamera, setSelectedCamera] = useState('all');
+  const [isStreaming, setIsStreaming] = useState(true);
+  const [isDrawingZone, setIsDrawingZone] = useState(false);
+  
+  const videoRef = useRef(null);
+  const canvasRef = useRef(null);
+  const drawingRef = useRef({
+    isDrawing: false,
+    startX: 0,
+    startY: 0,
+    zones: [],
+  });
 
   useEffect(() => {
-    // Fetch safety monitoring data from backend
-    // dispatch(fetchSafetyData());
-  }, []);
+    initializeCamera();
+    return () => {
+      if (videoRef.current?.srcObject) {
+        videoRef.current.srcObject.getTracks().forEach(track => track.stop());
+      }
+    };
+  }, [selectedCamera]);
+
+  const initializeCamera = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+      }
+    } catch (error) {
+      console.error('Error accessing camera:', error);
+      setIsStreaming(false);
+    }
+  };
+
+  const toggleStream = () => {
+    if (videoRef.current?.srcObject) {
+      videoRef.current.srcObject.getTracks().forEach(track => {
+        track.enabled = !isStreaming;
+      });
+      setIsStreaming(!isStreaming);
+    }
+  };
+
+  const captureSnapshot = () => {
+    if (videoRef.current && canvasRef.current) {
+      const context = canvasRef.current.getContext('2d');
+      canvasRef.current.width = videoRef.current.videoWidth;
+      canvasRef.current.height = videoRef.current.videoHeight;
+      context.drawImage(videoRef.current, 0, 0);
+      
+      // Draw safety zones
+      drawingRef.current.zones.forEach(zone => {
+        context.strokeStyle = zone.status === 'warning' ? '#ff9800' : '#4caf50';
+        context.lineWidth = 2;
+        context.strokeRect(zone.x, zone.y, zone.width, zone.height);
+        context.fillStyle = 'rgba(255, 255, 255, 0.7)';
+        context.fillText(zone.name, zone.x + 5, zone.y + 20);
+      });
+
+      const snapshot = canvasRef.current.toDataURL('image/jpeg');
+      // TODO: Send snapshot to backend for safety analysis
+    }
+  };
+
+  const handleMouseDown = (e) => {
+    if (!isDrawingZone) return;
+    const rect = canvasRef.current.getBoundingClientRect();
+    drawingRef.current = {
+      ...drawingRef.current,
+      isDrawing: true,
+      startX: e.clientX - rect.left,
+      startY: e.clientY - rect.top,
+    };
+  };
+
+  const handleMouseMove = (e) => {
+    if (!isDrawingZone || !drawingRef.current.isDrawing) return;
+    const rect = canvasRef.current.getBoundingClientRect();
+    const ctx = canvasRef.current.getContext('2d');
+    const currentX = e.clientX - rect.left;
+    const currentY = e.clientY - rect.top;
+
+    ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
+    
+    // Redraw existing zones
+    drawingRef.current.zones.forEach(zone => {
+      ctx.strokeStyle = zone.status === 'warning' ? '#ff9800' : '#4caf50';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(zone.x, zone.y, zone.width, zone.height);
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+      ctx.fillText(zone.name, zone.x + 5, zone.y + 20);
+    });
+
+    // Draw current zone
+    ctx.strokeStyle = '#4caf50';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(
+      drawingRef.current.startX,
+      drawingRef.current.startY,
+      currentX - drawingRef.current.startX,
+      currentY - drawingRef.current.startY
+    );
+  };
+
+  const handleMouseUp = (e) => {
+    if (!isDrawingZone || !drawingRef.current.isDrawing) return;
+    const rect = canvasRef.current.getBoundingClientRect();
+    const endX = e.clientX - rect.left;
+    const endY = e.clientY - rect.top;
+
+    const newZone = {
+      x: drawingRef.current.startX,
+      y: drawingRef.current.startY,
+      width: endX - drawingRef.current.startX,
+      height: endY - drawingRef.current.startY,
+      name: `Zone ${drawingRef.current.zones.length + 1}`,
+      status: 'normal',
+    };
+
+    drawingRef.current.zones.push(newZone);
+    drawingRef.current.isDrawing = false;
+    setIsDrawingZone(false);
+  };
 
   const occupancyTrendData = {
     labels: ['14:00', '14:10', '14:20', '14:30', '14:40', '14:50'],
@@ -136,265 +251,323 @@ const PlaygroundSafetyWidget = () => {
     setSelectedZone(zone);
   };
 
-  return (
-    <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-      <CardContent>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-          <Typography variant="h6">Playground Safety Monitor</Typography>
-          <Box>
-            <FormControl size="small" sx={{ mr: 1, minWidth: 120 }}>
-              <InputLabel>Camera</InputLabel>
-              <Select
-                value={selectedCamera}
-                onChange={(e) => setSelectedCamera(e.target.value)}
-                label="Camera"
-              >
-                <MenuItem value="all">All Cameras</MenuItem>
-                <MenuItem value="cam1">Camera 1</MenuItem>
-                <MenuItem value="cam2">Camera 2</MenuItem>
-                <MenuItem value="cam3">Camera 3</MenuItem>
-              </Select>
-            </FormControl>
-            <IconButton onClick={() => setSettingsOpen(true)}>
-              <SettingsIcon />
-            </IconButton>
-          </Box>
-        </Box>
+  const summaryContent = (
+    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+        <Chip
+          icon={<GroupIcon />}
+          label={`${safetyData.currentOccupancy}/${safetyData.maxCapacity}`}
+          color="primary"
+        />
+        <Chip
+          icon={<WarningIcon />}
+          label={`${safetyData.activeAlerts} Alerts`}
+          color={safetyData.activeAlerts > 0 ? "warning" : "success"}
+        />
+      </Box>
+      <FormControlLabel
+        control={
+          <Switch
+            checked={monitoringActive}
+            onChange={(e) => setMonitoringActive(e.target.checked)}
+            color="success"
+            size="small"
+          />
+        }
+        label={monitoringActive ? 'Monitoring Active' : 'Monitoring Paused'}
+      />
+    </Box>
+  );
 
-        <Grid container spacing={3}>
-          {/* Summary Cards */}
-          <Grid item xs={12} sm={6} md={3}>
-            <Paper sx={{ p: 2, textAlign: 'center' }}>
-              <Typography variant="subtitle2" gutterBottom>
-                Current Occupancy
-              </Typography>
-              <Typography variant="h4">
-                {safetyData.currentOccupancy}/{safetyData.maxCapacity}
-              </Typography>
-              <GroupIcon sx={{ fontSize: 40, color: 'primary.main', mt: 1 }} />
-            </Paper>
-          </Grid>
-          <Grid item xs={12} sm={6} md={3}>
-            <Paper sx={{ p: 2, textAlign: 'center' }}>
-              <Typography variant="subtitle2" gutterBottom>
-                Active Alerts
-              </Typography>
-              <Typography variant="h4" color="warning.main">
-                {safetyData.activeAlerts}
-              </Typography>
-              <WarningIcon sx={{ fontSize: 40, color: 'warning.main', mt: 1 }} />
-            </Paper>
-          </Grid>
-          <Grid item xs={12} sm={6} md={3}>
-            <Paper sx={{ p: 2, textAlign: 'center' }}>
-              <Typography variant="subtitle2" gutterBottom>
-                Average Speed
-              </Typography>
-              <Typography variant="h4">
-                {safetyData.averageSpeed} m/s
-              </Typography>
-              <SpeedIcon sx={{ fontSize: 40, color: 'info.main', mt: 1 }} />
-            </Paper>
-          </Grid>
-          <Grid item xs={12} sm={6} md={3}>
-            <Paper sx={{ p: 2, textAlign: 'center' }}>
-              <Typography variant="subtitle2" gutterBottom>
-                Monitoring Status
-              </Typography>
-              <FormControlLabel
-                control={
-                  <Switch
-                    checked={monitoringActive}
-                    onChange={(e) => setMonitoringActive(e.target.checked)}
-                    color="success"
-                  />
-                }
-                label={monitoringActive ? 'Active' : 'Paused'}
+  const expandedContent = (
+    <Box sx={{ height: '100%' }}>
+      <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 2 }}>
+        <FormControl size="small" sx={{ minWidth: 120 }}>
+          <InputLabel>Camera</InputLabel>
+          <Select
+            value={selectedCamera}
+            onChange={(e) => setSelectedCamera(e.target.value)}
+            label="Camera"
+          >
+            <MenuItem value="all">All Cameras</MenuItem>
+            <MenuItem value="cam1">Camera 1</MenuItem>
+            <MenuItem value="cam2">Camera 2</MenuItem>
+            <MenuItem value="cam3">Camera 3</MenuItem>
+          </Select>
+        </FormControl>
+        <IconButton onClick={toggleStream}>
+          {isStreaming ? <VideocamOffIcon /> : <VideocamIcon />}
+        </IconButton>
+        <IconButton onClick={captureSnapshot}>
+          <CameraIcon />
+        </IconButton>
+        <IconButton 
+          onClick={() => setIsDrawingZone(!isDrawingZone)}
+          color={isDrawingZone ? "primary" : "default"}
+        >
+          <EditIcon />
+        </IconButton>
+        <IconButton onClick={() => setSettingsOpen(true)}>
+          <SettingsIcon />
+        </IconButton>
+      </Box>
+
+      <Grid container spacing={3}>
+        {/* Camera Feed */}
+        <Grid item xs={12} md={8}>
+          <Paper sx={{ p: 2 }}>
+            <Typography variant="subtitle2" gutterBottom>
+              Live Camera Feed
+            </Typography>
+            <Box sx={{ position: 'relative', width: '100%', height: 400, bgcolor: 'black' }}>
+              <video
+                ref={videoRef}
+                autoPlay
+                playsInline
+                muted
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'contain',
+                  display: isStreaming ? 'block' : 'none'
+                }}
               />
-              {monitoringActive ? (
-                <PlayIcon sx={{ fontSize: 40, color: 'success.main', mt: 1 }} />
-              ) : (
-                <PauseIcon sx={{ fontSize: 40, color: 'error.main', mt: 1 }} />
+              <canvas
+                ref={canvasRef}
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  width: '100%',
+                  height: '100%',
+                  display: isDrawingZone ? 'block' : 'none',
+                }}
+                onMouseDown={handleMouseDown}
+                onMouseMove={handleMouseMove}
+                onMouseUp={handleMouseUp}
+              />
+              {!isStreaming && (
+                <Box sx={{
+                  position: 'absolute',
+                  top: '50%',
+                  left: '50%',
+                  transform: 'translate(-50%, -50%)',
+                  color: 'white'
+                }}>
+                  <Typography>Camera Paused</Typography>
+                </Box>
               )}
-            </Paper>
-          </Grid>
+              {isDrawingZone && (
+                <Box sx={{
+                  position: 'absolute',
+                  top: 8,
+                  left: 8,
+                  bgcolor: 'rgba(0, 0, 0, 0.7)',
+                  color: 'white',
+                  p: 1,
+                  borderRadius: 1,
+                }}>
+                  <Typography variant="caption">
+                    Click and drag to draw a safety zone
+                  </Typography>
+                </Box>
+              )}
+            </Box>
+          </Paper>
+        </Grid>
 
-          {/* Occupancy Trend */}
-          <Grid item xs={12} md={8}>
-            <Paper sx={{ p: 2 }}>
-              <Typography variant="subtitle2" gutterBottom>
-                Occupancy Trend
-              </Typography>
-              <Box sx={{ height: 300 }}>
-                <Line
-                  data={occupancyTrendData}
-                  options={{
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                      y: {
-                        beginAtZero: true,
-                        max: safetyData.maxCapacity + 10,
-                      },
-                    },
-                  }}
-                />
-              </Box>
-            </Paper>
-          </Grid>
-
-          {/* Activity Heatmap */}
-          <Grid item xs={12} md={4}>
-            <Paper sx={{ p: 2 }}>
-              <Typography variant="subtitle2" gutterBottom>
-                Activity Heatmap
-              </Typography>
-              <Box sx={{ height: 300 }}>
-                <Scatter
-                  data={zoneActivityData}
-                  options={{
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                      x: { min: 0, max: 5 },
-                      y: { min: 0, max: 5 },
-                    },
-                  }}
-                />
-              </Box>
-            </Paper>
-          </Grid>
-
-          {/* Zone Status */}
-          <Grid item xs={12} md={6}>
-            <Paper sx={{ p: 2 }}>
-              <Typography variant="subtitle2" gutterBottom>
-                Zone Status
-              </Typography>
-              <List>
-                {safetyData.zones.map((zone) => (
-                  <ListItem
-                    key={zone.id}
-                    button
-                    onClick={() => handleZoneClick(zone)}
-                  >
-                    <ListItemIcon>
-                      <MapIcon />
-                    </ListItemIcon>
-                    <ListItemText
-                      primary={zone.name}
-                      secondary={`Occupancy: ${zone.occupancy}`}
-                    />
-                    <ListItemSecondaryAction>
-                      <Chip
-                        label={zone.status}
-                        color={getStatusColor(zone.status)}
-                        size="small"
-                      />
-                    </ListItemSecondaryAction>
-                  </ListItem>
-                ))}
-              </List>
-            </Paper>
-          </Grid>
-
-          {/* Recent Events */}
-          <Grid item xs={12} md={6}>
-            <Paper sx={{ p: 2 }}>
-              <Typography variant="subtitle2" gutterBottom>
-                Recent Events
-              </Typography>
-              <List>
-                {safetyData.recentEvents.map((event) => (
-                  <ListItem key={event.id}>
-                    <ListItemIcon>
-                      <AlertIcon color={getStatusColor(event.severity)} />
-                    </ListItemIcon>
-                    <ListItemText
-                      primary={event.details}
-                      secondary={`${event.timestamp} - ${event.zone}`}
-                    />
-                    <ListItemSecondaryAction>
-                      <Chip
-                        label={event.severity}
-                        color={getStatusColor(event.severity)}
-                        size="small"
-                      />
-                    </ListItemSecondaryAction>
-                  </ListItem>
-                ))}
-              </List>
-            </Paper>
+        {/* Summary Cards */}
+        <Grid item xs={12} md={4}>
+          <Grid container spacing={2}>
+            <Grid item xs={12}>
+              <Paper sx={{ p: 2, textAlign: 'center' }}>
+                <Typography variant="subtitle2" gutterBottom>
+                  Current Occupancy
+                </Typography>
+                <Typography variant="h4">
+                  {safetyData.currentOccupancy}/{safetyData.maxCapacity}
+                </Typography>
+                <GroupIcon sx={{ fontSize: 40, color: 'primary.main', mt: 1 }} />
+              </Paper>
+            </Grid>
+            <Grid item xs={12}>
+              <Paper sx={{ p: 2, textAlign: 'center' }}>
+                <Typography variant="subtitle2" gutterBottom>
+                  Active Alerts
+                </Typography>
+                <Typography variant="h4" color="warning.main">
+                  {safetyData.activeAlerts}
+                </Typography>
+                <WarningIcon sx={{ fontSize: 40, color: 'warning.main', mt: 1 }} />
+              </Paper>
+            </Grid>
           </Grid>
         </Grid>
 
-        {/* Settings Dialog */}
-        <Dialog
-          open={settingsOpen}
-          onClose={() => setSettingsOpen(false)}
-          maxWidth="sm"
-          fullWidth
-        >
-          <DialogTitle>Safety Monitoring Settings</DialogTitle>
-          <DialogContent>
-            <Grid container spacing={2} sx={{ mt: 1 }}>
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  label="Maximum Capacity"
-                  type="number"
-                  value={safetyData.maxCapacity}
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  label="Speed Threshold (m/s)"
-                  type="number"
-                  value="5"
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <FormControlLabel
-                  control={<Switch defaultChecked />}
-                  label="Automatic Alerts"
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <FormControlLabel
-                  control={<Switch defaultChecked />}
-                  label="Motion Detection"
-                />
-              </Grid>
-            </Grid>
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={() => setSettingsOpen(false)}>Cancel</Button>
-            <Button variant="contained" onClick={() => setSettingsOpen(false)}>
-              Save Changes
-            </Button>
-          </DialogActions>
-        </Dialog>
+        {/* Occupancy Trend */}
+        <Grid item xs={12} md={8}>
+          <Paper sx={{ p: 2 }}>
+            <Typography variant="subtitle2" gutterBottom>
+              Occupancy Trend
+            </Typography>
+            <Box sx={{ height: 300 }}>
+              <Line
+                data={occupancyTrendData}
+                options={{
+                  responsive: true,
+                  maintainAspectRatio: false,
+                  scales: {
+                    y: {
+                      beginAtZero: true,
+                      max: safetyData.maxCapacity + 10,
+                    },
+                  },
+                }}
+              />
+            </Box>
+          </Paper>
+        </Grid>
 
-        <Box
-          sx={{
-            mt: 2,
-            pt: 2,
-            borderTop: 1,
-            borderColor: 'divider',
-            display: 'flex',
-            justifyContent: 'space-between',
-          }}
-        >
-          <Typography variant="body2" color="text.secondary">
-            Last updated: 2 minutes ago
-          </Typography>
-          <Button startIcon={<RefreshIcon />} size="small">
-            Refresh
+        {/* Zone Status */}
+        <Grid item xs={12} md={4}>
+          <Paper sx={{ p: 2 }}>
+            <Typography variant="subtitle2" gutterBottom>
+              Zone Status
+            </Typography>
+            <List>
+              {safetyData.zones.map((zone) => (
+                <ListItem
+                  key={zone.id}
+                  button
+                  onClick={() => handleZoneClick(zone)}
+                >
+                  <ListItemIcon>
+                    <MapIcon />
+                  </ListItemIcon>
+                  <ListItemText
+                    primary={zone.name}
+                    secondary={`Occupancy: ${zone.occupancy}`}
+                  />
+                  <ListItemSecondaryAction>
+                    <Chip
+                      label={zone.status}
+                      color={getStatusColor(zone.status)}
+                      size="small"
+                    />
+                  </ListItemSecondaryAction>
+                </ListItem>
+              ))}
+            </List>
+          </Paper>
+        </Grid>
+
+        {/* Recent Events */}
+        <Grid item xs={12}>
+          <Paper sx={{ p: 2 }}>
+            <Typography variant="subtitle2" gutterBottom>
+              Recent Events
+            </Typography>
+            <List>
+              {safetyData.recentEvents.map((event) => (
+                <ListItem key={event.id}>
+                  <ListItemIcon>
+                    <AlertIcon color={getStatusColor(event.severity)} />
+                  </ListItemIcon>
+                  <ListItemText
+                    primary={event.details}
+                    secondary={`${event.timestamp} - ${event.zone}`}
+                  />
+                  <ListItemSecondaryAction>
+                    <Chip
+                      label={event.severity}
+                      color={getStatusColor(event.severity)}
+                      size="small"
+                    />
+                  </ListItemSecondaryAction>
+                </ListItem>
+              ))}
+            </List>
+          </Paper>
+        </Grid>
+      </Grid>
+
+      {/* Settings Dialog */}
+      <Dialog
+        open={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>Safety Monitoring Settings</DialogTitle>
+        <DialogContent>
+          <Grid container spacing={2} sx={{ mt: 1 }}>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="Maximum Capacity"
+                type="number"
+                value={safetyData.maxCapacity}
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="Speed Threshold (m/s)"
+                type="number"
+                value="5"
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <FormControlLabel
+                control={<Switch defaultChecked />}
+                label="Automatic Alerts"
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <FormControlLabel
+                control={<Switch defaultChecked />}
+                label="Motion Detection"
+              />
+            </Grid>
+          </Grid>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setSettingsOpen(false)}>Cancel</Button>
+          <Button variant="contained" onClick={() => setSettingsOpen(false)}>
+            Save Changes
           </Button>
-        </Box>
-      </CardContent>
-    </Card>
+        </DialogActions>
+      </Dialog>
+
+      <Box
+        sx={{
+          mt: 2,
+          pt: 2,
+          borderTop: 1,
+          borderColor: 'divider',
+          display: 'flex',
+          justifyContent: 'space-between',
+        }}
+      >
+        <Typography variant="body2" color="text.secondary">
+          Last updated: 2 minutes ago
+        </Typography>
+        <Button startIcon={<RefreshIcon />} size="small">
+          Refresh
+        </Button>
+      </Box>
+    </Box>
+  );
+
+  return (
+    <BaseWidget
+      title="Playground Safety Monitor"
+      icon={<ShieldIcon />}
+      summary={summaryContent}
+      expandable={true}
+    >
+      {expandedContent}
+    </BaseWidget>
   );
 };
 

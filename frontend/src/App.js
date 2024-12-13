@@ -3,7 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import LandingPage from './pages/LandingPage';
-import WidgetBuilder from './components/WidgetBuilder/WidgetEditor';
+import TaskFlowEditor from './components/WidgetBuilder/TaskFlowEditor';
 import CameraManagement from './pages/CameraManagement';
 import Models from './pages/ModelsPage';
 import Settings from './pages/Settings';
@@ -14,6 +14,9 @@ import SchoolVision from './pages/modules/SchoolVision';
 import HospitalVision from './pages/modules/HospitalVision';
 import MineSiteVision from './pages/modules/MineSiteVision';
 import TrafficVision from './pages/modules/TrafficVision';
+import RecordingsList from './components/recordings/RecordingsList';
+import ArenaViewer from './components/recordings/ArenaViewer';
+import ArenaSettings from './components/recordings/ArenaSettings';
 import { AuthProvider } from './contexts/AuthContext';
 import { SiteProvider } from './contexts/SiteContext';
 import { CameraProvider } from './contexts/CameraContext';
@@ -69,8 +72,17 @@ function App() {
                     <Route path="/mine" element={<MineSiteVision />} />
                     <Route path="/traffic" element={<TrafficVision />} />
                     
-                    {/* Utility routes */}
-                    <Route path="/widget-builder" element={<WidgetBuilder />} />
+                    {/* Task and Flow Management routes */}
+                    <Route path="/task-flow-management" element={<TaskFlowEditor />} />
+                    <Route path="/task-builder" element={<TaskFlowEditor type="task" />} />
+                    <Route path="/widget-builder" element={<TaskFlowEditor type="widget" />} />
+                    
+                    {/* Recordings Arena routes */}
+                    <Route path="/recordings-list" element={<RecordingsList />} />
+                    <Route path="/recordings-arena/viewer/:recordingId?" element={<ArenaViewer />} />
+                    <Route path="/arena-settings" element={<ArenaSettings />} />
+                    
+                    {/* Management routes */}
                     <Route path="/camera-management" element={<CameraManagement />} />
                     <Route path="/site-management" element={<SiteManagement />} />
                     <Route path="/user-management" element={<UserManagement />} />

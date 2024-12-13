@@ -1,12 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Card,
-  CardContent,
   Typography,
   Grid,
   Box,
   Paper,
-  IconButton,
   Button,
   Chip,
   List,
@@ -14,37 +11,27 @@ import {
   ListItemText,
   ListItemIcon,
   ListItemSecondaryAction,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
   TextField,
   Select,
   MenuItem,
   FormControl,
   InputLabel,
-  Alert,
-  Avatar,
-  Badge,
-  Tooltip,
-  Switch,
   FormControlLabel,
+  Switch,
+  Tooltip,
 } from '@mui/material';
 import {
   Warning as WarningIcon,
   LocalHospital as HospitalIcon,
   PersonOff as FallIcon,
   Timer as TimerIcon,
-  Videocam as CameraIcon,
   NotificationsActive as AlertIcon,
-  Settings as SettingsIcon,
   Refresh as RefreshIcon,
-  Image as ImageIcon,
   Room as RoomIcon,
-  AccessTime as TimeIcon,
 } from '@mui/icons-material';
 import { useSelector, useDispatch } from 'react-redux';
 import { Line, Pie } from 'react-chartjs-2';
+import BaseWidget from '../BaseWidget';
 
 const PatientFallDetectionWidget = () => {
   const dispatch = useDispatch();
@@ -81,8 +68,6 @@ const PatientFallDetectionWidget = () => {
   });
 
   const [selectedRoom, setSelectedRoom] = useState(null);
-  const [settingsOpen, setSettingsOpen] = useState(false);
-  const [imageDialogOpen, setImageDialogOpen] = useState(false);
   const [selectedCamera, setSelectedCamera] = useState('all');
 
   useEffect(() => {
@@ -138,267 +123,256 @@ const PatientFallDetectionWidget = () => {
     setSelectedRoom(room);
   };
 
-  return (
-    <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-      <CardContent>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-          <Typography variant="h6">Patient Fall Detection</Typography>
-          <Box>
-            <FormControl size="small" sx={{ mr: 1, minWidth: 120 }}>
-              <InputLabel>Camera</InputLabel>
-              <Select
-                value={selectedCamera}
-                onChange={(e) => setSelectedCamera(e.target.value)}
-                label="Camera"
-              >
-                <MenuItem value="all">All Cameras</MenuItem>
-                <MenuItem value="floor1">Floor 1</MenuItem>
-                <MenuItem value="floor2">Floor 2</MenuItem>
-                <MenuItem value="floor3">Floor 3</MenuItem>
-              </Select>
-            </FormControl>
-            <IconButton onClick={() => setSettingsOpen(true)}>
-              <SettingsIcon />
-            </IconButton>
-          </Box>
-        </Box>
+  const renderContent = () => (
+    <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+      <Box sx={{ mb: 2, display: 'flex', justifyContent: 'flex-end' }}>
+        <FormControl size="small" sx={{ minWidth: 120 }}>
+          <InputLabel>Camera</InputLabel>
+          <Select
+            value={selectedCamera}
+            onChange={(e) => setSelectedCamera(e.target.value)}
+            label="Camera"
+          >
+            <MenuItem value="all">All Cameras</MenuItem>
+            <MenuItem value="floor1">Floor 1</MenuItem>
+            <MenuItem value="floor2">Floor 2</MenuItem>
+            <MenuItem value="floor3">Floor 3</MenuItem>
+          </Select>
+        </FormControl>
+      </Box>
 
-        <Grid container spacing={3}>
-          {/* Summary Cards */}
-          <Grid item xs={12} sm={6} md={3}>
-            <Paper sx={{ p: 2, textAlign: 'center' }}>
-              <Typography variant="subtitle2" gutterBottom>
-                Monitored Patients
-              </Typography>
-              <Typography variant="h4">{fallData.totalPatients}</Typography>
-              <HospitalIcon sx={{ fontSize: 40, color: 'primary.main', mt: 1 }} />
-            </Paper>
-          </Grid>
-          <Grid item xs={12} sm={6} md={3}>
-            <Paper sx={{ p: 2, textAlign: 'center' }}>
-              <Typography variant="subtitle2" gutterBottom>
-                Active Alerts
-              </Typography>
-              <Typography variant="h4" color="error.main">
-                {fallData.activeAlerts}
-              </Typography>
-              <WarningIcon sx={{ fontSize: 40, color: 'error.main', mt: 1 }} />
-            </Paper>
-          </Grid>
-          <Grid item xs={12} sm={6} md={3}>
-            <Paper sx={{ p: 2, textAlign: 'center' }}>
-              <Typography variant="subtitle2" gutterBottom>
-                Avg Response Time
-              </Typography>
-              <Typography variant="h4">{fallData.averageResponseTime}</Typography>
-              <TimerIcon sx={{ fontSize: 40, color: 'info.main', mt: 1 }} />
-            </Paper>
-          </Grid>
-          <Grid item xs={12} sm={6} md={3}>
-            <Paper sx={{ p: 2, textAlign: 'center' }}>
-              <Typography variant="subtitle2" gutterBottom>
-                Detected Falls
-              </Typography>
-              <Typography variant="h4">{fallData.detectedFalls}</Typography>
-              <FallIcon sx={{ fontSize: 40, color: 'warning.main', mt: 1 }} />
-            </Paper>
-          </Grid>
-
-          {/* Fall Distribution */}
-          <Grid item xs={12} md={4}>
-            <Paper sx={{ p: 2 }}>
-              <Typography variant="subtitle2" gutterBottom>
-                Activity Distribution
-              </Typography>
-              <Box sx={{ height: 300 }}>
-                <Pie
-                  data={fallDistributionData}
-                  options={{
-                    responsive: true,
-                    maintainAspectRatio: false,
-                  }}
-                />
-              </Box>
-            </Paper>
-          </Grid>
-
-          {/* Response Time Trend */}
-          <Grid item xs={12} md={8}>
-            <Paper sx={{ p: 2 }}>
-              <Typography variant="subtitle2" gutterBottom>
-                Response Time Trend
-              </Typography>
-              <Box sx={{ height: 300 }}>
-                <Line
-                  data={responseTimeTrendData}
-                  options={{
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                      y: {
-                        beginAtZero: true,
-                      },
-                    },
-                  }}
-                />
-              </Box>
-            </Paper>
-          </Grid>
-
-          {/* Room Status */}
-          <Grid item xs={12} md={6}>
-            <Paper sx={{ p: 2 }}>
-              <Typography variant="subtitle2" gutterBottom>
-                Room Status
-              </Typography>
-              <List>
-                {fallData.rooms.map((room) => (
-                  <ListItem
-                    key={room.id}
-                    button
-                    onClick={() => handleRoomClick(room)}
-                  >
-                    <ListItemIcon>
-                      <RoomIcon />
-                    </ListItemIcon>
-                    <ListItemText
-                      primary={room.name}
-                      secondary={`Patient: ${room.patient}`}
-                    />
-                    <ListItemSecondaryAction>
-                      <Chip
-                        label={room.status}
-                        color={getStatusColor(room.status)}
-                        size="small"
-                      />
-                    </ListItemSecondaryAction>
-                  </ListItem>
-                ))}
-              </List>
-            </Paper>
-          </Grid>
-
-          {/* Recent Events */}
-          <Grid item xs={12} md={6}>
-            <Paper sx={{ p: 2 }}>
-              <Typography variant="subtitle2" gutterBottom>
-                Recent Events
-              </Typography>
-              <List>
-                {fallData.recentEvents.map((event) => (
-                  <ListItem key={event.id}>
-                    <ListItemIcon>
-                      <AlertIcon color={getStatusColor(event.status)} />
-                    </ListItemIcon>
-                    <ListItemText
-                      primary={`${event.type.toUpperCase()} - ${event.patient}`}
-                      secondary={
-                        <React.Fragment>
-                          <Typography
-                            component="span"
-                            variant="body2"
-                            color="text.primary"
-                          >
-                            {event.room}
-                          </Typography>
-                          {` - ${event.timestamp}`}
-                        </React.Fragment>
-                      }
-                    />
-                    <ListItemSecondaryAction>
-                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                        <Tooltip title="Response Time">
-                          <Typography
-                            variant="body2"
-                            color="text.secondary"
-                            sx={{ mr: 1 }}
-                          >
-                            {event.responseTime}
-                          </Typography>
-                        </Tooltip>
-                        <Chip
-                          label={event.status}
-                          color={getStatusColor(event.status)}
-                          size="small"
-                        />
-                      </Box>
-                    </ListItemSecondaryAction>
-                  </ListItem>
-                ))}
-              </List>
-            </Paper>
-          </Grid>
+      <Grid container spacing={2}>
+        {/* Summary Cards */}
+        <Grid item xs={6} sm={3}>
+          <Paper sx={{ p: 1.5, textAlign: 'center' }}>
+            <HospitalIcon sx={{ fontSize: 24, color: 'primary.main', mb: 1 }} />
+            <Typography variant="h6">{fallData.totalPatients}</Typography>
+            <Typography variant="caption">Monitored Patients</Typography>
+          </Paper>
+        </Grid>
+        <Grid item xs={6} sm={3}>
+          <Paper sx={{ p: 1.5, textAlign: 'center' }}>
+            <WarningIcon sx={{ fontSize: 24, color: 'error.main', mb: 1 }} />
+            <Typography variant="h6" color="error.main">
+              {fallData.activeAlerts}
+            </Typography>
+            <Typography variant="caption">Active Alerts</Typography>
+          </Paper>
+        </Grid>
+        <Grid item xs={6} sm={3}>
+          <Paper sx={{ p: 1.5, textAlign: 'center' }}>
+            <TimerIcon sx={{ fontSize: 24, color: 'info.main', mb: 1 }} />
+            <Typography variant="h6">{fallData.averageResponseTime}</Typography>
+            <Typography variant="caption">Avg Response Time</Typography>
+          </Paper>
+        </Grid>
+        <Grid item xs={6} sm={3}>
+          <Paper sx={{ p: 1.5, textAlign: 'center' }}>
+            <FallIcon sx={{ fontSize: 24, color: 'warning.main', mb: 1 }} />
+            <Typography variant="h6">{fallData.detectedFalls}</Typography>
+            <Typography variant="caption">Detected Falls</Typography>
+          </Paper>
         </Grid>
 
-        {/* Settings Dialog */}
-        <Dialog
-          open={settingsOpen}
-          onClose={() => setSettingsOpen(false)}
-          maxWidth="sm"
-          fullWidth
-        >
-          <DialogTitle>Fall Detection Settings</DialogTitle>
-          <DialogContent>
-            <Grid container spacing={2} sx={{ mt: 1 }}>
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  label="Alert Threshold"
-                  type="number"
-                  value="75"
-                  helperText="Confidence threshold for fall detection (%)"
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  label="Response Time Threshold"
-                  type="number"
-                  value="60"
-                  helperText="Maximum response time in seconds"
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <FormControlLabel
-                  control={<Switch defaultChecked />}
-                  label="Automatic Alerts"
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <FormControlLabel
-                  control={<Switch defaultChecked />}
-                  label="Night Mode Detection"
-                />
-              </Grid>
-            </Grid>
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={() => setSettingsOpen(false)}>Cancel</Button>
-            <Button variant="contained" onClick={() => setSettingsOpen(false)}>
-              Save Changes
-            </Button>
-          </DialogActions>
-        </Dialog>
+        {/* Charts */}
+        <Grid item xs={12} md={4}>
+          <Paper sx={{ p: 2, height: '300px' }}>
+            <Typography variant="subtitle2" gutterBottom>
+              Activity Distribution
+            </Typography>
+            <Box sx={{ height: 'calc(100% - 24px)' }}>
+              <Pie
+                data={fallDistributionData}
+                options={{
+                  responsive: true,
+                  maintainAspectRatio: false,
+                }}
+              />
+            </Box>
+          </Paper>
+        </Grid>
 
-        <Box
-          sx={{
-            mt: 2,
-            pt: 2,
-            borderTop: 1,
-            borderColor: 'divider',
-            display: 'flex',
-            justifyContent: 'space-between',
+        <Grid item xs={12} md={8}>
+          <Paper sx={{ p: 2, height: '300px' }}>
+            <Typography variant="subtitle2" gutterBottom>
+              Response Time Trend
+            </Typography>
+            <Box sx={{ height: 'calc(100% - 24px)' }}>
+              <Line
+                data={responseTimeTrendData}
+                options={{
+                  responsive: true,
+                  maintainAspectRatio: false,
+                  scales: {
+                    y: {
+                      beginAtZero: true,
+                    },
+                  },
+                }}
+              />
+            </Box>
+          </Paper>
+        </Grid>
+
+        {/* Lists */}
+        <Grid item xs={12} md={6}>
+          <Paper sx={{ p: 2, height: '300px', overflow: 'auto' }}>
+            <Typography variant="subtitle2" gutterBottom>
+              Room Status
+            </Typography>
+            <List dense>
+              {fallData.rooms.map((room) => (
+                <ListItem
+                  key={room.id}
+                  button
+                  onClick={() => handleRoomClick(room)}
+                >
+                  <ListItemIcon>
+                    <RoomIcon />
+                  </ListItemIcon>
+                  <ListItemText
+                    primary={room.name}
+                    secondary={`Patient: ${room.patient}`}
+                  />
+                  <ListItemSecondaryAction>
+                    <Chip
+                      label={room.status}
+                      color={getStatusColor(room.status)}
+                      size="small"
+                    />
+                  </ListItemSecondaryAction>
+                </ListItem>
+              ))}
+            </List>
+          </Paper>
+        </Grid>
+
+        <Grid item xs={12} md={6}>
+          <Paper sx={{ p: 2, height: '300px', overflow: 'auto' }}>
+            <Typography variant="subtitle2" gutterBottom>
+              Recent Events
+            </Typography>
+            <List dense>
+              {fallData.recentEvents.map((event) => (
+                <ListItem key={event.id}>
+                  <ListItemIcon>
+                    <AlertIcon color={getStatusColor(event.status)} />
+                  </ListItemIcon>
+                  <ListItemText
+                    primary={`${event.type.toUpperCase()} - ${event.patient}`}
+                    secondary={
+                      <React.Fragment>
+                        <Typography
+                          component="span"
+                          variant="body2"
+                          color="text.primary"
+                        >
+                          {event.room}
+                        </Typography>
+                        {` - ${event.timestamp}`}
+                      </React.Fragment>
+                    }
+                  />
+                  <ListItemSecondaryAction>
+                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                      <Tooltip title="Response Time">
+                        <Typography
+                          variant="body2"
+                          color="text.secondary"
+                          sx={{ mr: 1 }}
+                        >
+                          {event.responseTime}
+                        </Typography>
+                      </Tooltip>
+                      <Chip
+                        label={event.status}
+                        color={getStatusColor(event.status)}
+                        size="small"
+                      />
+                    </Box>
+                  </ListItemSecondaryAction>
+                </ListItem>
+              ))}
+            </List>
+          </Paper>
+        </Grid>
+      </Grid>
+
+      <Box
+        sx={{
+          mt: 2,
+          pt: 2,
+          borderTop: 1,
+          borderColor: 'divider',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+        }}
+      >
+        <Typography variant="body2" color="text.secondary">
+          Last updated: 2 minutes ago
+        </Typography>
+        <Button
+          startIcon={<RefreshIcon />}
+          size="small"
+          onClick={() => {
+            // dispatch(fetchFallData());
           }}
         >
-          <Typography variant="body2" color="text.secondary">
-            Last updated: 2 minutes ago
-          </Typography>
-          <Button startIcon={<RefreshIcon />} size="small">
-            Refresh
-          </Button>
-        </Box>
-      </CardContent>
-    </Card>
+          Refresh
+        </Button>
+      </Box>
+    </Box>
+  );
+
+  const settingsContent = (
+    <Grid container spacing={2}>
+      <Grid item xs={12}>
+        <TextField
+          fullWidth
+          label="Alert Threshold"
+          type="number"
+          defaultValue={75}
+          helperText="Confidence threshold for fall detection (%)"
+        />
+      </Grid>
+      <Grid item xs={12}>
+        <TextField
+          fullWidth
+          label="Response Time Threshold"
+          type="number"
+          defaultValue={60}
+          helperText="Maximum response time in seconds"
+        />
+      </Grid>
+      <Grid item xs={12}>
+        <FormControlLabel
+          control={<Switch defaultChecked />}
+          label="Automatic Alerts"
+        />
+      </Grid>
+      <Grid item xs={12}>
+        <FormControlLabel
+          control={<Switch defaultChecked />}
+          label="Night Mode Detection"
+        />
+      </Grid>
+    </Grid>
+  );
+
+  return (
+    <BaseWidget
+      title="Patient Fall Detection"
+      summary={
+        <Typography variant="body2" color="text.secondary">
+          Monitoring {fallData.totalPatients} patients with {fallData.activeAlerts} active alerts
+        </Typography>
+      }
+      configurable
+      settings={settingsContent}
+    >
+      {renderContent()}
+    </BaseWidget>
   );
 };
 

@@ -3,191 +3,162 @@ import {
   Box,
   Card,
   CardContent,
-  CardHeader,
   IconButton,
-  Collapse,
   Typography,
-  useTheme,
+  Menu,
+  MenuItem,
+  Collapse,
+  Tooltip,
 } from '@mui/material';
 import {
-  ExpandMore as ExpandMoreIcon,
+  MoreVert as MoreIcon,
+  Delete as DeleteIcon,
+  OpenInFull as ExpandIcon,
+  CloseFullscreen as CollapseIcon,
   Settings as SettingsIcon,
-  Close as CloseIcon,
-  ArrowBack as ArrowBackIcon,
 } from '@mui/icons-material';
-import Draggable from 'react-draggable';
 
 const BaseWidget = ({
   title,
-  icon: Icon,
-  onClose,
-  onSettings,
-  onBack,
-  expanded: controlledExpanded,
-  onExpandChange,
+  summary,
   children,
-  headerProps = {},
-  contentProps = {},
-  size = 'medium',
+  onDelete,
+  expandable = true,
+  configurable = true,
+  className,
+  sx = {},
 }) => {
-  const theme = useTheme();
-  const [internalExpanded, setInternalExpanded] = useState(false);
-  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [expanded, setExpanded] = useState(false);
+  const [anchorEl, setAnchorEl] = useState(null);
+  const [showSettings, setShowSettings] = useState(false);
 
-  const isControlled = controlledExpanded !== undefined;
-  const expanded = isControlled ? controlledExpanded : internalExpanded;
-
-  const handleExpandClick = () => {
-    if (isControlled) {
-      onExpandChange?.(!expanded);
-    } else {
-      setInternalExpanded(!expanded);
-    }
+  const handleMenuOpen = (event) => {
+    setAnchorEl(event.currentTarget);
   };
 
-  const handleDrag = (e, data) => {
-    setPosition({ x: data.x, y: data.y });
+  const handleMenuClose = () => {
+    setAnchorEl(null);
   };
 
-  const sizes = {
-    small: { width: '300px', minHeight: '180px', expandedHeight: '400px' },
-    medium: { width: '400px', minHeight: '250px', expandedHeight: '500px' },
-    large: { width: '600px', minHeight: '300px', expandedHeight: '600px' },
+  const handleDelete = () => {
+    handleMenuClose();
+    onDelete?.();
   };
 
-  const currentSize = sizes[size] || sizes.medium;
+  const handleExpand = () => {
+    setExpanded(!expanded);
+  };
 
-  const cardContent = (
-    <Card
-      sx={{
-        width: currentSize.width,
-        minHeight: currentSize.minHeight,
-        height: expanded ? currentSize.expandedHeight : currentSize.minHeight,
-        display: 'flex',
-        flexDirection: 'column',
-        position: 'relative',
-        transition: theme.transitions.create(['height', 'width'], {
-          duration: theme.transitions.duration.standard,
-        }),
-        overflow: 'hidden',
-        '&:hover': {
-          boxShadow: theme.shadows[8],
-        },
-      }}
-    >
-      <CardHeader
-        sx={{
-          flexShrink: 0,
-          height: '64px',
-          p: 2,
-          bgcolor: theme.palette.primary.light,
-          color: theme.palette.primary.contrastText,
-        }}
-        avatar={
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            {onBack && (
-              <IconButton 
-                onClick={onBack} 
-                size="small" 
-                sx={{ color: theme.palette.primary.contrastText }}
-              >
-                <ArrowBackIcon />
-              </IconButton>
-            )}
-            {Icon && <Icon />}
-          </Box>
-        }
-        action={
-          <Box>
-            {onSettings && (
-              <IconButton 
-                onClick={onSettings} 
-                size="small"
-                sx={{ color: theme.palette.primary.contrastText }}
-              >
-                <SettingsIcon />
-              </IconButton>
-            )}
-            <IconButton
-              onClick={handleExpandClick}
-              sx={{
-                transform: expanded ? 'rotate(180deg)' : 'rotate(0deg)',
-                transition: theme.transitions.create('transform', {
-                  duration: theme.transitions.duration.shortest,
-                }),
-                color: theme.palette.primary.contrastText,
-              }}
-              size="small"
-            >
-              <ExpandMoreIcon />
-            </IconButton>
-            {onClose && (
-              <IconButton 
-                onClick={onClose} 
-                size="small"
-                sx={{ color: theme.palette.primary.contrastText }}
-              >
-                <CloseIcon />
-              </IconButton>
-            )}
-          </Box>
-        }
-        title={
-          <Typography variant="subtitle1" component="div" sx={{ color: theme.palette.primary.contrastText }}>
-            {title}
-          </Typography>
-        }
-        {...headerProps}
-      />
-      <Collapse 
-        in={expanded} 
-        timeout="auto" 
-        sx={{
-          flexGrow: 1,
-          overflowY: 'auto',
-        }}
-      >
-        <CardContent
-          sx={{
-            height: '100%',
-            p: 2,
-            '&:last-child': {
-              pb: 2,
-            },
-          }}
-          {...contentProps}
-        >
-          {children}
-        </CardContent>
-      </Collapse>
-      {!expanded && (
-        <CardContent
-          sx={{
-            flexGrow: 1,
-            p: 2,
-            '&:last-child': {
-              pb: 2,
-            },
-          }}
-          {...contentProps}
-        >
-          {children}
-        </CardContent>
-      )}
-    </Card>
-  );
+  const handleSettings = () => {
+    handleMenuClose();
+    setShowSettings(!showSettings);
+  };
 
   return (
-    <Draggable
-      position={position}
-      onDrag={handleDrag}
-      bounds="parent"
-      handle=".MuiCardHeader-root"
+    <Card
+      className={className}
+      sx={{
+        position: 'relative',
+        height: expanded ? 'calc(100% - 16px)' : 'auto',
+        minHeight: '300px',
+        display: 'flex',
+        flexDirection: 'column',
+        transition: 'all 0.3s ease',
+        ...sx,
+      }}
     >
-      <div style={{ position: 'absolute' }}>
-        {cardContent}
-      </div>
-    </Draggable>
+      <CardContent sx={{ p: 0, '&:last-child': { pb: 0 }, flex: 1, display: 'flex', flexDirection: 'column' }}>
+        {/* Widget Header */}
+        <Box
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            p: 2,
+            borderBottom: 1,
+            borderColor: 'divider',
+            flexShrink: 0,
+          }}
+        >
+          <Typography variant="h6" component="div" gutterBottom>
+            {title}
+          </Typography>
+          <Box>
+            {expandable && (
+              <Tooltip title={expanded ? 'Collapse' : 'Expand'}>
+                <IconButton onClick={handleExpand} size="small">
+                  {expanded ? <CollapseIcon /> : <ExpandIcon />}
+                </IconButton>
+              </Tooltip>
+            )}
+            <IconButton
+              aria-label="widget menu"
+              aria-controls="widget-menu"
+              aria-haspopup="true"
+              onClick={handleMenuOpen}
+              size="small"
+            >
+              <MoreIcon />
+            </IconButton>
+          </Box>
+        </Box>
+
+        {/* Widget Menu */}
+        <Menu
+          id="widget-menu"
+          anchorEl={anchorEl}
+          open={Boolean(anchorEl)}
+          onClose={handleMenuClose}
+        >
+          {configurable && (
+            <MenuItem onClick={handleSettings}>
+              <SettingsIcon fontSize="small" sx={{ mr: 1 }} />
+              Settings
+            </MenuItem>
+          )}
+          <MenuItem onClick={handleDelete} sx={{ color: 'error.main' }}>
+            <DeleteIcon fontSize="small" sx={{ mr: 1 }} />
+            Delete
+          </MenuItem>
+        </Menu>
+
+        {/* Widget Content Container */}
+        <Box sx={{ 
+          flex: 1,
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden',
+        }}>
+          {/* Widget Summary (shown when not expanded) */}
+          {!expanded && summary && (
+            <Box sx={{ px: 2, py: 1, flexShrink: 0 }}>
+              {summary}
+            </Box>
+          )}
+
+          {/* Widget Content */}
+          <Collapse 
+            in={expanded || !summary} 
+            collapsedSize={0}
+            sx={{ 
+              flex: 1,
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'auto'
+            }}
+          >
+            <Box sx={{ 
+              p: 2,
+              flex: 1,
+              display: 'flex',
+              flexDirection: 'column'
+            }}>
+              {children}
+            </Box>
+          </Collapse>
+        </Box>
+      </CardContent>
+    </Card>
   );
 };
 

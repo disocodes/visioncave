@@ -22,6 +22,25 @@ import {
   Construction,
   TrafficOutlined,
   Settings,
+  Engineering,
+  SafetyCheck,
+  ReportProblem,
+  DirectionsCar,
+  LocalShipping,
+  People,
+  Class,
+  AssignmentInd,
+  Psychology,
+  MonitorHeart,
+  PersonPin,
+  Inventory,
+  LocalShippingOutlined,
+  Visibility,
+  Face,
+  SportsKabaddi,
+  PrecisionManufacturing,
+  HealthAndSafety,
+  BugReport,
 } from '@mui/icons-material';
 
 const nodeCategories = [
@@ -35,27 +54,60 @@ const nodeCategories = [
   {
     title: 'Processing Nodes',
     nodes: [
-      { type: 'detection', name: 'Object Detection', icon: Security, description: 'Detect objects in video stream' },
-      { type: 'tracking', name: 'Object Tracking', icon: Timeline, description: 'Track objects across frames' },
-      { type: 'analytics', name: 'Analytics', icon: Analytics, description: 'Analyze video data' },
+      { type: 'yolov5', name: 'YOLO v5', icon: Visibility, description: 'Deep learning object detection' },
+      { type: 'poseDetection', name: 'Pose Detection', icon: SportsKabaddi, description: 'Human pose estimation' },
+      { type: 'faceDetection', name: 'Face Detection', icon: Face, description: 'Facial detection and recognition' },
+      { type: 'activityRecognition', name: 'Activity Recognition', icon: Timeline, description: 'Analyze human activities' },
+      { type: 'anomalyDetection', name: 'Anomaly Detection', icon: BugReport, description: 'Detect unusual patterns' },
     ],
   },
   {
-    title: 'Domain-Specific Nodes',
+    title: 'Mine Site Nodes',
     nodes: [
-      { type: 'residential', name: 'Residential', icon: Person, description: 'Residential monitoring features' },
-      { type: 'school', name: 'School', icon: School, description: 'School monitoring features' },
-      { type: 'hospital', name: 'Hospital', icon: LocalHospital, description: 'Hospital monitoring features' },
-      { type: 'mine', name: 'Mine Site', icon: Construction, description: 'Mine site monitoring features' },
-      { type: 'traffic', name: 'Traffic', icon: TrafficOutlined, description: 'Traffic monitoring features' },
+      { type: 'heavyMachineryTracking', name: 'Heavy Machinery Tracking', icon: Engineering, description: 'Track heavy machinery movement' },
+      { type: 'safetyGearCompliance', name: 'Safety Gear Compliance', icon: SafetyCheck, description: 'Monitor PPE compliance' },
+      { type: 'hazardousArea', name: 'Hazardous Area', icon: ReportProblem, description: 'Monitor dangerous zones' },
+      { type: 'ppeDetection', name: 'PPE Detection', icon: HealthAndSafety, description: 'Detect personal protective equipment' },
+    ],
+  },
+  {
+    title: 'Traffic Nodes',
+    nodes: [
+      { type: 'trafficFlow', name: 'Traffic Flow', icon: DirectionsCar, description: 'Monitor traffic patterns' },
+      { type: 'parkingOccupancy', name: 'Parking Occupancy', icon: LocalParking, description: 'Track parking space usage' },
+      { type: 'vehicleAnalysis', name: 'Vehicle Analysis', icon: LocalShipping, description: 'Analyze vehicle types and patterns' },
+    ],
+  },
+  {
+    title: 'School Nodes',
+    nodes: [
+      { type: 'classroomActivity', name: 'Classroom Activity', icon: Class, description: 'Monitor classroom activities' },
+      { type: 'studentAttendance', name: 'Student Attendance', icon: AssignmentInd, description: 'Track student attendance' },
+      { type: 'attentionAnalysis', name: 'Attention Analysis', icon: Psychology, description: 'Analyze student attention' },
+    ],
+  },
+  {
+    title: 'Hospital Nodes',
+    nodes: [
+      { type: 'patientMonitoring', name: 'Patient Monitoring', icon: MonitorHeart, description: 'Monitor patient activity' },
+      { type: 'staffTracking', name: 'Staff Tracking', icon: PersonPin, description: 'Track medical staff' },
+      { type: 'equipmentTracking', name: 'Equipment Tracking', icon: Inventory, description: 'Track medical equipment' },
+    ],
+  },
+  {
+    title: 'Residential Nodes',
+    nodes: [
+      { type: 'securityMonitoring', name: 'Security Monitoring', icon: Security, description: 'Monitor security events' },
+      { type: 'packageDetection', name: 'Package Detection', icon: LocalShippingOutlined, description: 'Detect package delivery' },
+      { type: 'visitorTracking', name: 'Visitor Tracking', icon: Person, description: 'Track visitor activity' },
     ],
   },
   {
     title: 'Output Nodes',
     nodes: [
       { type: 'alert', name: 'Alert', icon: Warning, description: 'Generate alerts based on conditions' },
-      { type: 'dashboard', name: 'Dashboard', icon: Analytics, description: 'Display data on dashboard' },
-      { type: 'database', name: 'Database', icon: Settings, description: 'Store data in database' },
+      { type: 'analytics', name: 'Analytics', icon: Analytics, description: 'Display analytics data' },
+      { type: 'timeSeriesAnalysis', name: 'Time Series Analysis', icon: Timeline, description: 'Analyze temporal patterns' },
     ],
   },
 ];

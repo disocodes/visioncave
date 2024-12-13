@@ -9,6 +9,16 @@ const initialState = {
   },
   zones: [],
   alerts: [],
+  trafficFlow: {
+    currentFlow: 0,
+    flowChange: 0,
+    avgSpeed: 0,
+    speedChange: 0,
+    congestionLevel: 0,
+    congestionChange: 0,
+    hourlyData: [],
+    lastUpdated: null
+  }
 };
 
 export const widgetDataSlice = createSlice({
@@ -39,6 +49,13 @@ export const widgetDataSlice = createSlice({
     clearAlerts: (state) => {
       state.alerts = [];
     },
+    updateTrafficFlowData: (state, action) => {
+      state.trafficFlow = {
+        ...state.trafficFlow,
+        ...action.payload,
+        lastUpdated: new Date().toISOString()
+      };
+    }
   },
 });
 
@@ -50,6 +67,7 @@ export const {
   updateZone,
   addAlert,
   clearAlerts,
+  updateTrafficFlowData
 } = widgetDataSlice.actions;
 
 export default widgetDataSlice.reducer;

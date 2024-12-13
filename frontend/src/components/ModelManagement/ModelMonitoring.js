@@ -18,6 +18,8 @@ import { Line } from 'react-chartjs-2';
 import { useSnackbar } from 'notistack';
 import axios from 'axios';
 import Plot from 'react-plotly.js';
+import '../../../config/chartConfig'; // Import chart configuration
+import { defaultOptions } from '../../../config/chartConfig';
 
 const ModelMonitoring = ({ modelId }) => {
   const [metrics, setMetrics] = useState(null);
@@ -111,11 +113,9 @@ const ModelMonitoring = ({ modelId }) => {
     };
 
     const options = {
-      responsive: true,
+      ...defaultOptions,
       plugins: {
-        legend: {
-          position: 'top',
-        },
+        ...defaultOptions.plugins,
         title: {
           display: true,
           text: 'Model Performance Metrics',

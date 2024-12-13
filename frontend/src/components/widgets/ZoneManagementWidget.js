@@ -34,6 +34,7 @@ import {
   Visibility as VisibilityIcon,
   VisibilityOff as VisibilityOffIcon,
 } from '@mui/icons-material';
+import Konva from 'konva';
 import { Stage, Layer, Line, Circle } from 'react-konva';
 import { addZone, updateZone, removeZone } from '../../store/slices/widgetDataSlice';
 
@@ -47,7 +48,7 @@ const ZoneManagementWidget = () => {
   const [isDrawing, setIsDrawing] = useState(false);
   const [points, setPoints] = useState([]);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [stageDimensions, setStageDimensions] = useState({ width: 640, height: 480 }); // Safe default
+  const [stageDimensions, setStageDimensions] = useState(null);
   const [zoneConfig, setZoneConfig] = useState({
     name: '',
     type: 'monitoring',
@@ -71,6 +72,39 @@ const ZoneManagementWidget = () => {
     safety: ['ppe_required', 'distance_check'],
   };
 
+  useEffect(() => {
+    const updateStageDimensions = () => {
+      if (containerRef.current) {
+        const { clientWidth, clientHeight } = containerRef.current;
+        if (clientWidth && clientHeight) {
+          setStageDimensions({
+            width: Math.max(clientWidth, 1),
+            height: Math.max(clientHeight, 1)
+          });
+        }
+      }
+    };
+
+    // Initial update
+    updateStageDimensions();
+
+    // Add resize observer
+    const resizeObserver = new ResizeObserver(() => {
+      window.requestAnimationFrame(updateStageDimensions);
+    });
+    
+    if (containerRef.current) {
+      resizeObserver.observe(containerRef.current);
+    }
+
+    // Cleanup
+    return () => {
+      if (containerRef.current) {
+        resizeObserver.unobserve(containerRef.current);
+      }
+    };
+  }, []);
+
   const handleStageClick = (e) => {
     if (!isDrawing) return;
     
@@ -91,6 +125,7 @@ const ZoneManagementWidget = () => {
       rules: zone.rules || [],
       active: zone.active ?? true,
     });
+    setDialogOpen(true);
   };
 
   const handleSaveZone = () => {
@@ -124,6 +159,7 @@ const ZoneManagementWidget = () => {
       rules: [],
       active: true,
     });
+    setIsDrawing(false);
   };
 
   const handleToggleZone = (zone) => {
@@ -131,48 +167,92 @@ const ZoneManagementWidget = () => {
     dispatch(updateZone({ ...zone, active: !zone.active }));
   };
 
-  useEffect(() => {
-    const updateStageDimensions = () => {
-      if (containerRef.current) {
-        const { clientWidth, clientHeight } = containerRef.current;
-        if (clientWidth && clientHeight) {
-          setStageDimensions({
-            width: clientWidth,
-            height: clientHeight
-          });
-        }
-      }
-    };
-
-    // Initial update
-    updateStageDimensions();
-
-    // Add resize observer
-    const resizeObserver = new ResizeObserver(updateStageDimensions);
-    if (containerRef.current) {
-      resizeObserver.observe(containerRef.current);
+  const renderStage = () => {
+    if (!stageDimensions || !stageDimensions.width || !stageDimensions.height) {
+      return null;
     }
 
-    // Cleanup
-    return () => {
-      if (containerRef.current) {
-        resizeObserver.unobserve(containerRef.current);
-      }
-    };
-  }, []);
+    return (
+      <Stage
+        width={stageDimensions.width}
+        height={stageDimensions.height}
+        onClick={handleStageClick}
+        style={{ position: 'absolute', top: 0, left: 0 }}
+      >
+        <Layer>
+          {zones.map((zone) => (
+            zone.points && zone.points.length >= 4 && (
+              <Line
+                key={zone.id}
+                points={zone.points}
+                closed
+                stroke={zone.active ? '#2196f3' : '#bdbdbd'}
+                fill={zone.active ? '#2196f320' : '#bdbdbd20'}
+              />
+            )
+          ))}
+          {points.length >= 4 && (
+            <Line
+              points={points}
+              closed
+              stroke="#4caf50"
+              fill="#4caf5020"
+            />
+          )}
+          {points.map((point, i) => (
+            i % 2 === 0 && (
+              <Circle
+                key={i}
+                x={point}
+                y={points[i + 1]}
+                radius={4}
+                fill="#4caf50"
+              />
+            )
+          ))}
+        </Layer>
+      </Stage>
+    );
+  };
 
   return (
     <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
       <CardContent>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
           <Typography variant="h6">Zone Management</Typography>
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
-            onClick={() => setDialogOpen(true)}
-          >
-            Add Zone
-          </Button>
+          <Box>
+            {isDrawing ? (
+              <>
+                <Button
+                  variant="contained"
+                  color="primary"
+                  onClick={() => setDialogOpen(true)}
+                  sx={{ mr: 1 }}
+                  disabled={points.length < 6}
+                >
+                  Save Zone
+                </Button>
+                <Button
+                  variant="outlined"
+                  color="secondary"
+                  onClick={() => {
+                    setIsDrawing(false);
+                    setPoints([]);
+                  }}
+                >
+                  Cancel
+                </Button>
+              </>
+            ) : (
+              <Button
+                variant="contained"
+                startIcon={<AddIcon />}
+                onClick={() => setIsDrawing(true)}
+              >
+                Add Zone
+              </Button>
+            )}
+          </Box>
         </Box>
 
         <Grid container spacing={2}>
@@ -235,6 +315,7 @@ const ZoneManagementWidget = () => {
                 height: 400,
                 border: '1px solid #ccc',
                 position: 'relative',
+                overflow: 'hidden',
               }}
             >
               <video
@@ -245,47 +326,7 @@ const ZoneManagementWidget = () => {
                   objectFit: 'cover',
                 }}
               />
-              {stageDimensions.width > 0 && stageDimensions.height > 0 && (
-                <Stage
-                  width={stageDimensions.width}
-                  height={stageDimensions.height}
-                  onClick={handleStageClick}
-                  style={{ position: 'absolute', top: 0, left: 0 }}
-                >
-                  <Layer>
-                    {zones.map((zone) => (
-                      zone.points && zone.points.length > 0 && (
-                        <Line
-                          key={zone.id}
-                          points={zone.points}
-                          closed
-                          stroke={zone.active ? '#2196f3' : '#bdbdbd'}
-                          fill={zone.active ? '#2196f320' : '#bdbdbd20'}
-                        />
-                      )
-                    ))}
-                    {points.length > 0 && (
-                      <Line
-                        points={points}
-                        closed
-                        stroke="#4caf50"
-                        fill="#4caf5020"
-                      />
-                    )}
-                    {points.map((point, i) => (
-                      i % 2 === 0 && (
-                        <Circle
-                          key={i}
-                          x={point}
-                          y={points[i + 1]}
-                          radius={4}
-                          fill="#4caf50"
-                        />
-                      )
-                    ))}
-                  </Layer>
-                </Stage>
-              )}
+              {renderStage()}
             </Box>
           </Grid>
         </Grid>
@@ -379,6 +420,7 @@ const ZoneManagementWidget = () => {
               onClick={handleSaveZone}
               variant="contained"
               startIcon={<SaveIcon />}
+              disabled={!zoneConfig.name}
             >
               Save
             </Button>

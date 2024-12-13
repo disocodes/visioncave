@@ -41,6 +41,7 @@ import {
 } from '@mui/icons-material';
 import { useSelector, useDispatch } from 'react-redux';
 import { Line, Scatter } from 'react-chartjs-2';
+import { defaultOptions } from '../../../config/chartConfig';
 
 const HeavyMachineryTrackingWidget = () => {
   const dispatch = useDispatch();
@@ -142,6 +143,34 @@ const HeavyMachineryTrackingWidget = () => {
     setSelectedVehicle(vehicle);
   };
 
+  const scatterOptions = {
+    ...defaultOptions,
+    scales: {
+      ...defaultOptions.scales,
+      x: {
+        ...defaultOptions.scales.x,
+        min: 0,
+        max: 5,
+      },
+      y: {
+        ...defaultOptions.scales.y,
+        min: 0,
+        max: 5,
+      },
+    },
+  };
+
+  const lineOptions = {
+    ...defaultOptions,
+    plugins: {
+      ...defaultOptions.plugins,
+      legend: {
+        ...defaultOptions.plugins.legend,
+        position: 'top',
+      },
+    },
+  };
+
   return (
     <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
       <CardContent>
@@ -221,14 +250,7 @@ const HeavyMachineryTrackingWidget = () => {
               <Box sx={{ height: 400 }}>
                 <Scatter
                   data={vehicleLocationData}
-                  options={{
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                      x: { min: 0, max: 5 },
-                      y: { min: 0, max: 5 },
-                    },
-                  }}
+                  options={scatterOptions}
                 />
               </Box>
             </Paper>
@@ -243,10 +265,7 @@ const HeavyMachineryTrackingWidget = () => {
               <Box sx={{ height: 400 }}>
                 <Line
                   data={efficiencyTrendData}
-                  options={{
-                    responsive: true,
-                    maintainAspectRatio: false,
-                  }}
+                  options={lineOptions}
                 />
               </Box>
             </Paper>

@@ -21,9 +21,9 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from 'recharts';
-import BaseWidget from './BaseWidget';
-import { wsService } from '../../services/websocket';
-import { updateTrafficFlowData } from '../../store/slices/widgetDataSlice';
+import BaseWidget from '../BaseWidget';
+import { wsService } from '../../../services/websocket';
+import { updateTrafficFlowData } from '../../../store/slices/widgetDataSlice';
 
 const StatCard = ({ title, value, change, unit = '' }) => {
   const theme = useTheme();

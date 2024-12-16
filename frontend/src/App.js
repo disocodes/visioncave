@@ -22,6 +22,7 @@ import { SiteProvider } from './contexts/SiteContext';
 import { CameraProvider } from './contexts/CameraContext';
 import { AnalyticsProvider } from './contexts/AnalyticsContext';
 import { WidgetProvider } from './contexts/WidgetContext';
+import MainLayout from './components/layout/MainLayout';
 
 const theme = createTheme({
   palette: {
@@ -62,32 +63,35 @@ function App() {
               <WidgetProvider>
                 <Router>
                   <Routes>
-                    {/* Main routes */}
-                    <Route path="/" element={<LandingPage />} />
-                    
-                    {/* Module routes */}
-                    <Route path="/residential" element={<ResidentialVision />} />
-                    <Route path="/school" element={<SchoolVision />} />
-                    <Route path="/hospital" element={<HospitalVision />} />
-                    <Route path="/mine" element={<MineSiteVision />} />
-                    <Route path="/traffic" element={<TrafficVision />} />
-                    
-                    {/* Task and Flow Management routes */}
-                    <Route path="/task-flow-management" element={<TaskFlowEditor />} />
-                    <Route path="/task-builder" element={<TaskFlowEditor type="task" />} />
-                    <Route path="/widget-builder" element={<TaskFlowEditor type="widget" />} />
-                    
-                    {/* Recordings Arena routes */}
-                    <Route path="/recordings-list" element={<RecordingsList />} />
-                    <Route path="/recordings-arena/viewer/:recordingId?" element={<ArenaViewer />} />
-                    <Route path="/arena-settings" element={<ArenaSettings />} />
-                    
-                    {/* Management routes */}
-                    <Route path="/camera-management" element={<CameraManagement />} />
-                    <Route path="/site-management" element={<SiteManagement />} />
-                    <Route path="/user-management" element={<UserManagement />} />
-                    <Route path="/models" element={<Models />} />
-                    <Route path="/settings" element={<Settings />} />
+                    <Route element={<MainLayout />}>
+                      {/* Main routes */}
+                      <Route path="/" element={<LandingPage />} />
+                      <Route path="/dashboard" element={<Navigate to="/" replace />} />
+                      
+                      {/* Module routes */}
+                      <Route path="/residential" element={<ResidentialVision />} />
+                      <Route path="/school" element={<SchoolVision />} />
+                      <Route path="/hospital" element={<HospitalVision />} />
+                      <Route path="/mine" element={<MineSiteVision />} />
+                      <Route path="/traffic" element={<TrafficVision />} />
+                      
+                      {/* Task and Flow Management routes */}
+                      <Route path="/task-flow-management" element={<TaskFlowEditor />} />
+                      <Route path="/widget-builder" element={<TaskFlowEditor type="widget" />} />
+                      <Route path="/task-builder" element={<TaskFlowEditor type="task" />} />
+                      
+                      {/* Arena routes */}
+                      <Route path="/recordings-list" element={<RecordingsList />} />
+                      <Route path="/arena/viewer/:recordingId" element={<ArenaViewer />} />
+                      <Route path="/arena-settings" element={<ArenaSettings />} />
+                      
+                      {/* Utility routes */}
+                      <Route path="/camera-management" element={<CameraManagement />} />
+                      <Route path="/site-management" element={<SiteManagement />} />
+                      <Route path="/user-management" element={<UserManagement />} />
+                      <Route path="/models" element={<Models />} />
+                      <Route path="/settings" element={<Settings />} />
+                    </Route>
                     
                     {/* Fallback route */}
                     <Route path="*" element={<Navigate to="/" replace />} />

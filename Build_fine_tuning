@@ -8,6 +8,15 @@ Rename widget Builder to Task and Flow Management
   - Create the arena settings include bring own cloud storage like google drive, aws or nextcloud option
   - rules for how long videos can be kept, to achieve or delete
   *check that this functionality is mapped to the backend service
+
+Widget Definition:
+A widget is a group of tools combined into a single, cohesive interface component that provides specific functionality. Widgets serve as containers that encapsulate related tools, data visualizations, and controls to perform specialized tasks. They can be:
+- Built using the Widget Builder to combine multiple tools into a reusable component
+- Configured to process and display visual outputs from computer vision models and other data sources
+- Saved and reused across different dashboards through the add widget menu
+- Enhanced with tasks created in the Task Builder for additional functionality
+- Expanded to reveal detailed controls and advanced tools while maintaining a clean summary view when collapsed
+
 Widget sizes and layout and functionality for all modules
 - Make widgets deletable
 - Create front face of widget with just sumnmaries and extra detail and tools when expanded
@@ -17,5 +26,4 @@ Widget sizes and layout and functionality for all modules
 *check that this functionality is mapped to the backend service
 
 Navigation Buttons
-Check all dashboards and pages and include navigation buttons like back to go back to previous page. This could be the module icon in the top of the naviagtion pane 
-
+Check all dashboards and pages and include navigation buttons like back to go back to previous page. This could be the module icon in the top of the naviagtion pane

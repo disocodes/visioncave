@@ -1,17 +1,18 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
-from pathlib import Path
-import uvicorn
-from app.api.v1.endpoints import cameras, school, widgets, websockets
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from fastapi.responses import JSONResponse
+from app.api.v1.api import api_router
+from app.core.deps import engine, get_db
+from app.core.init_db import init_test_data
+from app.models.sql_models import Base
+from sqlalchemy.orm import Session
+from app.routers import websocket
+import json
 
-app = FastAPI(
-    title="Visioncave API",
-    description="Backend API for Visioncave Computer Vision Analytics Platform",
-    version="1.0.0"
-)
+app = FastAPI()
 
-# CORS middleware configuration
+# Configure CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],  # In production, replace with specific origins
@@ -20,26 +21,44 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Create necessary directories
-Path("uploads").mkdir(exist_ok=True)
-Path("models").mkdir(exist_ok=True)
+# Include API router
+app.include_router(api_router, prefix="/api/v1")
 
-# Mount static files
-app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
+# Include WebSocket router
+app.include_router(websocket.router, prefix="/ws")
 
-# Include API routes
-app.include_router(cameras.router, prefix="/api/v1/cameras", tags=["cameras"])
-app.include_router(school.router, prefix="/api/v1/school", tags=["school"])
-app.include_router(widgets.router, prefix="/api/v1/widgets", tags=["widgets"])
-app.include_router(websockets.router, prefix="/api/v1/ws", tags=["websockets"])
+# Add token endpoint for authentication
+@app.post("/token")
+async def login(
+    form_data: OAuth2PasswordRequestForm = Depends(),
+    db: Session = Depends(get_db)
+):
+    # For development, accept any credentials and return a token
+    # In production, implement proper authentication
+    token_data = {
+        "access_token": "development_token",
+        "token_type": "bearer"
+    }
+    return JSONResponse(
+        content=token_data,
+        headers={"Content-Type": "application/json"},
+        media_type="application/json"
+    )
 
-@app.get("/")
-async def root():
-    return {"message": "Welcome to Visioncave API"}
+# Initialize database and test data
+@app.on_event("startup")
+async def startup_event():
+    # Create database tables
+    Base.metadata.create_all(bind=engine)
+    
+    # Initialize test data
+    db = next(get_db())
+    init_test_data(db)
 
-@app.get("/health")
-async def health_check():
-    return {"status": "healthy"}
-
-if __name__ == "__main__":
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+# Add WebSocket CORS middleware for development
+@app.middleware("http")
+async def add_websocket_cors_headers(request, call_next):
+    response = await call_next(request)
+    if request.url.path.startswith("/ws"):
+        response.headers["Access-Control-Allow-Origin"] = "*"
+    return response

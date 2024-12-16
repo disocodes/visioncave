@@ -1,14 +1,23 @@
-import React, { createContext, useState, useContext } from 'react';
+import React, { createContext, useState, useContext, useEffect } from 'react';
+import * as authService from '../services/authService';
 
 const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+  // On mount, set development token
+  useEffect(() => {
+    authService.setDevToken();
+    setIsAuthenticated(true);
+  }, []);
 
   const login = async (credentials) => {
     try {
-      // TODO: Implement actual login logic with backend
+      const response = await authService.login(credentials);
       setUser({ username: credentials.username });
+      setIsAuthenticated(true);
       return true;
     } catch (error) {
       console.error('Login failed:', error);
@@ -17,11 +26,13 @@ export const AuthProvider = ({ children }) => {
   };
 
   const logout = () => {
+    authService.logout();
     setUser(null);
+    setIsAuthenticated(false);
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout }}>
+    <AuthContext.Provider value={{ user, isAuthenticated, login, logout }}>
       {children}
     </AuthContext.Provider>
   );

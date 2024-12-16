@@ -1,262 +1,223 @@
-import React from 'react';
-import { Box, Typography, IconButton, Grid, Paper, Divider } from '@mui/material';
-import ModuleLayout from '../../components/layout/ModuleLayout';
+import React, { useEffect, useState } from 'react';
 import { 
-  Fullscreen as FullscreenIcon,
-  Settings as SettingsIcon,
-  Save as SaveIcon,
-  DragIndicator as DragIndicatorIcon,
-  Assessment as AssessmentIcon,
-  Timeline as TimelineIcon,
-  Notifications as NotificationsIcon
+  Box, 
+  Grid, 
+  IconButton, 
+  Tooltip,
+  Menu,
+  MenuItem,
+  ListItemText,
+  ListItemIcon,
+  Typography
+} from '@mui/material';
+import { 
+  Add as AddIcon,
+  School as SchoolIcon,
+  Park as PlaygroundIcon,
+  Class as ClassroomIcon,
+  Videocam as VideocamIcon
 } from '@mui/icons-material';
+import ModuleLayout from '../../components/layout/ModuleLayout';
+import WidgetContainer from '../../components/widgets/WidgetContainer';
+import { useWidget } from '../../contexts/WidgetContext';
+import { BASE_WIDGETS } from '../../config/baseWidgets';
+
+// Import school widgets
 import StudentAttendanceWidget from '../../components/widgets/school/StudentAttendanceWidget';
 import PlaygroundSafetyWidget from '../../components/widgets/school/PlaygroundSafetyWidget';
 import ClassroomAttentionWidget from '../../components/widgets/school/ClassroomAttentionWidget';
 
-const WidgetHeader = ({ title, onExpand, onDragStart }) => (
-  <Box 
-    sx={{ 
-      display: 'flex', 
-      justifyContent: 'space-between', 
-      alignItems: 'center', 
-      mb: 2,
-      cursor: 'move'
-    }}
-    draggable
-    onDragStart={onDragStart}
-  >
-    <Box sx={{ display: 'flex', alignItems: 'center' }}>
-      <IconButton size="small" sx={{ mr: 1 }}>
-        <DragIndicatorIcon fontSize="small" />
-      </IconButton>
-      <Typography variant="h6">{title}</Typography>
-    </Box>
-    <Box>
-      <IconButton size="small" onClick={() => {}}>
-        <SettingsIcon fontSize="small" />
-      </IconButton>
-      <IconButton size="small" onClick={onExpand}>
-        <FullscreenIcon fontSize="small" />
-      </IconButton>
-      <IconButton size="small" onClick={() => {}}>
-        <SaveIcon fontSize="small" />
-      </IconButton>
-    </Box>
-  </Box>
-);
-
-const ExpandedView = ({ widget }) => (
-  <Box sx={{ mt: 2 }}>
-    <Grid container spacing={2}>
-      <Grid item xs={12} md={8}>
-        <Paper sx={{ p: 2, height: '100%' }}>
-          <Typography variant="h6" gutterBottom>
-            <TimelineIcon sx={{ mr: 1, verticalAlign: 'middle' }} />
-            Real-time Data
-          </Typography>
-          <Box sx={{ height: 'calc(100% - 40px)', overflow: 'auto' }}>
-            {widget.component && <widget.component expanded={true} />}
-          </Box>
-        </Paper>
-      </Grid>
-      <Grid item xs={12} md={4}>
-        <Grid container spacing={2}>
-          <Grid item xs={12}>
-            <Paper sx={{ p: 2 }}>
-              <Typography variant="h6" gutterBottom>
-                <AssessmentIcon sx={{ mr: 1, verticalAlign: 'middle' }} />
-                Analytics
-              </Typography>
-              {widget.analytics?.map((item, index) => (
-                <Box key={index} sx={{ mb: 2 }}>
-                  <Typography variant="subtitle2" color="text.secondary">
-                    {item.label}
-                  </Typography>
-                  <Typography variant="h4">{item.value}</Typography>
-                </Box>
-              ))}
-            </Paper>
-          </Grid>
-          <Grid item xs={12}>
-            <Paper sx={{ p: 2 }}>
-              <Typography variant="h6" gutterBottom>
-                <NotificationsIcon sx={{ mr: 1, verticalAlign: 'middle' }} />
-                Alerts & Notifications
-              </Typography>
-              {widget.alerts?.map((alert, index) => (
-                <Box key={index} sx={{ mb: 1 }}>
-                  <Typography variant="body2" color={alert.severity === 'high' ? 'error' : 'text.secondary'}>
-                    • {alert.message}
-                  </Typography>
-                </Box>
-              ))}
-            </Paper>
-          </Grid>
-        </Grid>
-      </Grid>
-      <Grid item xs={12}>
-        <Paper sx={{ p: 2 }}>
-          <Typography variant="h6" gutterBottom>Controls & Settings</Typography>
-          <Grid container spacing={2}>
-            {widget.controls?.map((control, index) => (
-              <Grid item xs={12} sm={6} md={4} key={index}>
-                <Box sx={{ p: 1, border: 1, borderColor: 'divider', borderRadius: 1 }}>
-                  <Typography variant="subtitle2" gutterBottom>
-                    {control}
-                  </Typography>
-                </Box>
-              </Grid>
-            ))}
-          </Grid>
-        </Paper>
-      </Grid>
-    </Grid>
-  </Box>
-);
+// Module-specific widgets with default configurations
+const MODULE_WIDGETS = [
+  {
+    id: 'camera',
+    title: 'Camera Stream',
+    icon: <VideocamIcon />,
+    type: 'camera_stream',
+    config: {
+      refreshInterval: 5,
+      alertThreshold: 90,
+      streamQuality: 'HD',
+      enableAudio: true,
+      recordStream: false
+    }
+  },
+  {
+    id: 'attendance',
+    title: 'Student Attendance',
+    icon: <SchoolIcon />,
+    type: 'student_attendance',
+    config: {
+      refreshInterval: 300,
+      alertThreshold: 85,
+      attendanceThreshold: 90,
+      classGroups: 'Class A,Class B,Class C',
+      reportingTime: '09:00'
+    }
+  },
+  {
+    id: 'playground',
+    title: 'Playground Safety',
+    icon: <PlaygroundIcon />,
+    type: 'playground_safety',
+    config: {
+      refreshInterval: 10,
+      alertThreshold: 90,
+      crowdingThreshold: 25,
+      safetyZones: 'Playground A,Playground B,Sports Field',
+      supervisorCount: 2
+    }
+  },
+  {
+    id: 'classroom',
+    title: 'Classroom Attention',
+    icon: <ClassroomIcon />,
+    type: 'classroom_attention',
+    config: {
+      refreshInterval: 30,
+      alertThreshold: 70,
+      attentionThreshold: 75,
+      classroomCapacity: 30,
+      monitoringPeriod: 45
+    }
+  }
+];
 
 const SchoolVision = () => {
-  const [expandedWidget, setExpandedWidget] = React.useState(null);
-  const [widgets, setWidgets] = React.useState([
-    {
-      id: 'attendance',
-      title: 'Student Attendance',
-      component: StudentAttendanceWidget,
-      controls: [
-        'Attendance threshold',
-        'Notification settings',
-        'Report generation',
-        'Alert configuration',
-        'Data export options',
-        'Visualization preferences'
-      ],
-      analytics: [
-        { label: 'Present Today', value: '95%' },
-        { label: 'Weekly Average', value: '92%' },
-        { label: 'Monthly Trend', value: '+2.5%' }
-      ],
-      alerts: [
-        { message: 'Class 10B attendance below threshold', severity: 'high' },
-        { message: 'Weekly report generated', severity: 'low' }
-      ]
-    },
-    {
-      id: 'playground',
-      title: 'Playground Safety',
-      component: PlaygroundSafetyWidget,
-      controls: [
-        'Safety zones',
-        'Alert settings',
-        'Monitoring schedule',
-        'Camera selection',
-        'Detection sensitivity',
-        'Response protocols'
-      ],
-      analytics: [
-        { label: 'Safety Score', value: '98%' },
-        { label: 'Active Zones', value: '5/6' },
-        { label: 'Daily Incidents', value: '0' }
-      ],
-      alerts: [
-        { message: 'Zone 3 monitoring active', severity: 'low' },
-        { message: 'Equipment check scheduled', severity: 'low' }
-      ]
-    },
-    {
-      id: 'classroom',
-      title: 'Classroom Attention',
-      component: ClassroomAttentionWidget,
-      controls: [
-        'Attention metrics',
-        'Alert thresholds',
-        'Reporting preferences',
-        'Class scheduling',
-        'Analytics display',
-        'Integration settings'
-      ],
-      analytics: [
-        { label: 'Average Attention', value: '87%' },
-        { label: 'Active Classes', value: '12' },
-        { label: 'Peak Hours', value: '10AM' }
-      ],
-      alerts: [
-        { message: 'High engagement in Class 8A', severity: 'low' },
-        { message: 'Attention drop in Class 11C', severity: 'high' }
-      ]
+  const { 
+    widgets, 
+    setCurrentModule, 
+    createWidget, 
+    handleWidgetReorder, 
+    currentSiteId 
+  } = useWidget();
+  const [anchorEl, setAnchorEl] = useState(null);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    setCurrentModule('school');
+  }, [setCurrentModule]);
+
+  const handleAddClick = (event) => {
+    setAnchorEl(event.currentTarget);
+  };
+
+  const handleMenuClose = () => {
+    setAnchorEl(null);
+  };
+
+  const handleAddWidget = async (widget) => {
+    if (!currentSiteId) {
+      setError('No site selected. Please select a site first.');
+      return;
     }
-  ]);
 
-  const handleExpand = (widgetId) => {
-    setExpandedWidget(expandedWidget === widgetId ? null : widgetId);
+    try {
+      await createWidget({
+        name: widget.title,
+        type: widget.type,
+        site_id: currentSiteId,
+        config: widget.config,
+        description: `${widget.title} widget for site ${currentSiteId}`,
+        module: 'school'
+      });
+      handleMenuClose();
+    } catch (error) {
+      console.error('Failed to add widget:', error);
+      setError('Failed to add widget. Please try again.');
+    }
   };
 
-  const handleDragStart = (e, index) => {
-    e.dataTransfer.setData('widgetIndex', index.toString());
-  };
-
-  const handleDragOver = (e) => {
-    e.preventDefault();
-  };
-
-  const handleDrop = (e, dropIndex) => {
-    const dragIndex = parseInt(e.dataTransfer.getData('widgetIndex'));
-    if (dragIndex === dropIndex) return;
-
-    const newWidgets = [...widgets];
-    const [draggedWidget] = newWidgets.splice(dragIndex, 1);
-    newWidgets.splice(dropIndex, 0, draggedWidget);
-    setWidgets(newWidgets);
-  };
+  const addWidgetButton = (
+    <Tooltip title="Add Widget">
+      <IconButton 
+        color="primary"
+        onClick={handleAddClick}
+        size="large"
+        sx={{
+          backgroundColor: 'primary.main',
+          color: 'white',
+          '&:hover': {
+            backgroundColor: 'primary.dark',
+          },
+          mr: 2
+        }}
+      >
+        <AddIcon />
+      </IconButton>
+    </Tooltip>
+  );
 
   return (
-    <ModuleLayout title="School Vision">
+    <ModuleLayout 
+      title="School Vision"
+      actions={addWidgetButton}
+    >
       <Box sx={{ p: 3 }}>
         <Grid container spacing={3}>
           {widgets.map((widget, index) => {
-            const isExpanded = expandedWidget === widget.id;
-            const Widget = widget.component;
-
+            const Widget = widget.type === 'camera_stream' ? BASE_WIDGETS[0].component :
+                         widget.type === 'student_attendance' ? StudentAttendanceWidget :
+                         widget.type === 'playground_safety' ? PlaygroundSafetyWidget :
+                         widget.type === 'classroom_attention' ? ClassroomAttentionWidget : null;
+            
+            if (!Widget) {
+              console.warn(`No component found for widget type: ${widget.type}`);
+              return null;
+            }
+            
             return (
-              <Grid item xs={12} md={isExpanded ? 12 : 6} lg={isExpanded ? 12 : 4} key={widget.id}>
-                <Box
-                  sx={{
-                    height: isExpanded ? 'calc(100vh - 200px)' : '400px',
-                    transition: 'all 0.3s ease',
-                    bgcolor: 'background.paper',
-                    borderRadius: 1,
-                    boxShadow: 3,
-                    p: 2,
-                    ...(isExpanded && {
-                      position: 'absolute',
-                      top: 0,
-                      left: 0,
-                      right: 0,
-                      bottom: 0,
-                      zIndex: 1000,
-                      m: 3,
-                      overflow: 'auto'
-                    }),
-                  }}
-                  onDragOver={handleDragOver}
-                  onDrop={(e) => handleDrop(e, index)}
+              <Grid item xs={12} md={6} lg={4} key={widget.id}>
+                <WidgetContainer
+                  id={widget.id}
+                  title={widget.title || widget.name}
+                  index={index}
+                  position={widget.position}
+                  config={widget.config}
+                  metrics={widget.metrics}
+                  alerts={widget.alerts}
+                  siteId={currentSiteId}
                 >
-                  <WidgetHeader 
-                    title={widget.title} 
-                    onExpand={() => handleExpand(widget.id)}
-                    onDragStart={(e) => handleDragStart(e, index)}
-                  />
-                  <Box sx={{ height: isExpanded ? 'calc(100% - 48px)' : '320px', overflow: 'auto' }}>
-                    {isExpanded ? (
-                      <ExpandedView widget={widget} />
-                    ) : (
-                      <Widget />
-                    )}
-                  </Box>
-                </Box>
+                  <Widget config={widget.config} />
+                </WidgetContainer>
               </Grid>
             );
           })}
         </Grid>
+
+        <Menu
+          anchorEl={anchorEl}
+          open={Boolean(anchorEl)}
+          onClose={handleMenuClose}
+          anchorOrigin={{
+            vertical: 'bottom',
+            horizontal: 'right',
+          }}
+          transformOrigin={{
+            vertical: 'top',
+            horizontal: 'right',
+          }}
+        >
+          {MODULE_WIDGETS.map((widget) => (
+            <MenuItem 
+              key={widget.id}
+              onClick={() => handleAddWidget(widget)}
+              sx={{ minWidth: '200px' }}
+            >
+              <ListItemIcon>
+                {widget.icon}
+              </ListItemIcon>
+              <ListItemText 
+                primary={widget.title}
+                secondary={
+                  <Typography variant="caption" color="text.secondary">
+                    Click to add
+                  </Typography>
+                }
+              />
+            </MenuItem>
+          ))}
+        </Menu>
       </Box>
     </ModuleLayout>
   );

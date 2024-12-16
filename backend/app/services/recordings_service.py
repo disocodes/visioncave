@@ -3,20 +3,9 @@ from fastapi import HTTPException
 from sqlalchemy.orm import Session
 from ..models.sql_models import Recording, Task
 from datetime import datetime, timedelta
-import boto3
-from google.oauth2.credentials import Credentials
-from google.cloud import storage
-import nextcloud_client
 import os
 
 class RecordingsService:
-    def __init__(self):
-        self.storage_handlers = {
-            'aws-s3': self.handle_s3_storage,
-            'google-drive': self.handle_google_drive,
-            'nextcloud': self.handle_nextcloud,
-        }
-
     async def create_recording(
         self, db: Session, name: str, file_path: str, user_id: int
     ) -> Recording:
@@ -117,84 +106,6 @@ class RecordingsService:
         except Exception as e:
             db.rollback()
             raise HTTPException(status_code=400, detail=str(e))
-
-    async def upload_to_cloud(
-        self, recording_id: int, provider: str, credentials: Dict[str, Any]
-    ) -> str:
-        """Upload a recording to the specified cloud storage provider."""
-        try:
-            handler = self.storage_handlers.get(provider)
-            if not handler:
-                raise ValueError(f"Unsupported storage provider: {provider}")
-
-            return await handler(recording_id, credentials)
-        except Exception as e:
-            raise HTTPException(status_code=400, detail=str(e))
-
-    async def handle_s3_storage(
-        self, recording_id: int, credentials: Dict[str, Any]
-    ) -> str:
-        """Handle upload to AWS S3."""
-        try:
-            s3_client = boto3.client(
-                's3',
-                aws_access_key_id=credentials['access_key_id'],
-                aws_secret_access_key=credentials['secret_access_key'],
-            )
-
-            bucket_name = credentials['bucket_name']
-            file_key = f'recordings/{recording_id}'
-
-            # Upload file
-            s3_client.upload_file(
-                f'/path/to/recordings/{recording_id}.mp4',
-                bucket_name,
-                file_key,
-            )
-
-            return f's3://{bucket_name}/{file_key}'
-        except Exception as e:
-            raise ValueError(f"Failed to upload to S3: {str(e)}")
-
-    async def handle_google_drive(
-        self, recording_id: int, credentials: Dict[str, Any]
-    ) -> str:
-        """Handle upload to Google Drive."""
-        try:
-            creds = Credentials.from_authorized_user_info(credentials)
-            storage_client = storage.Client(credentials=creds)
-            bucket_name = credentials['bucket_name']
-            bucket = storage_client.bucket(bucket_name)
-
-            blob_name = f'recordings/{recording_id}'
-            blob = bucket.blob(blob_name)
-
-            # Upload file
-            blob.upload_from_filename(f'/path/to/recordings/{recording_id}.mp4')
-
-            return f'gs://{bucket_name}/{blob_name}'
-        except Exception as e:
-            raise ValueError(f"Failed to upload to Google Drive: {str(e)}")
-
-    async def handle_nextcloud(
-        self, recording_id: int, credentials: Dict[str, Any]
-    ) -> str:
-        """Handle upload to Nextcloud."""
-        try:
-            nc = nextcloud_client.Client(
-                credentials['server_url'],
-                auth=(credentials['username'], credentials['password'])
-            )
-
-            remote_path = f'/recordings/{recording_id}.mp4'
-            local_path = f'/path/to/recordings/{recording_id}.mp4'
-
-            # Upload file
-            nc.put_file(remote_path, local_path)
-
-            return f"{credentials['server_url']}/remote.php/dav/files/{credentials['username']}{remote_path}"
-        except Exception as e:
-            raise ValueError(f"Failed to upload to Nextcloud: {str(e)}")
 
     async def get_recording_tasks(
         self, db: Session, recording_id: int, user_id: int

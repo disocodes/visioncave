@@ -1,128 +1,99 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  Box, 
-  Typography, 
-  List, 
-  ListItem, 
-  ListItemText, 
-  ListItemIcon,
-  Badge,
-  IconButton,
-  Alert
-} from '@mui/material';
-import LocalShippingIcon from '@mui/icons-material/LocalShipping';
-import DeleteIcon from '@mui/icons-material/Delete';
-import CheckCircleIcon from '@mui/icons-material/CheckCircle';
-import WarningIcon from '@mui/icons-material/Warning';
+import React, { useEffect, useState } from 'react';
+import { Box, Typography, Alert } from '@mui/material';
+import { LocalShipping as PackageIcon } from '@mui/icons-material';
 
-const PackageDetectionWidget = ({ socketUrl }) => {
+const PackageDetectionWidget = ({ config }) => {
   const [packages, setPackages] = useState([]);
-  const [alerts, setAlerts] = useState([]);
+  const [error, setError] = useState(null);
+  const [ws, setWs] = useState(null);
 
   useEffect(() => {
-    const ws = new WebSocket(socketUrl);
+    let websocket = null;
+    
+    const connectWebSocket = () => {
+      try {
+        websocket = new WebSocket(config.socketUrl);
 
-    ws.onmessage = (event) => {
-      const data = JSON.parse(event.data);
-      if (data.type === 'package_detection') {
-        handlePackageUpdate(data);
+        websocket.onopen = () => {
+          console.log('Package detection WebSocket connected');
+          setError(null);
+        };
+
+        websocket.onmessage = (event) => {
+          try {
+            const data = JSON.parse(event.data);
+            if (data.type === 'package_detection') {
+              setPackages(prev => [data.package_id, ...prev].slice(0, 5));
+            }
+          } catch (err) {
+            console.error('Error parsing package detection message:', err);
+          }
+        };
+
+        websocket.onerror = (error) => {
+          console.error('Package detection WebSocket error:', error);
+          setError('Connection error. Retrying...');
+        };
+
+        websocket.onclose = () => {
+          console.log('Package detection WebSocket closed');
+          setError('Connection lost. Reconnecting...');
+          // Attempt to reconnect after 5 seconds
+          setTimeout(connectWebSocket, 5000);
+        };
+
+        setWs(websocket);
+      } catch (err) {
+        console.error('Failed to connect to package detection WebSocket:', err);
+        setError('Failed to connect. Retrying...');
+        // Attempt to reconnect after 5 seconds
+        setTimeout(connectWebSocket, 5000);
       }
     };
 
+    connectWebSocket();
+
     return () => {
-      ws.close();
+      if (websocket) {
+        websocket.close();
+      }
     };
-  }, [socketUrl]);
-
-  const handlePackageUpdate = (data) => {
-    if (data.event === 'new_package') {
-      setPackages(prev => [...prev, {
-        id: data.package_id,
-        timestamp: new Date().toLocaleString(),
-        status: 'new',
-        location: data.location
-      }]);
-      setAlerts(prev => [...prev, {
-        id: Date.now(),
-        message: 'New package detected',
-        type: 'info'
-      }]);
-    } else if (data.event === 'package_removed') {
-      setPackages(prev => 
-        prev.map(pkg => 
-          pkg.id === data.package_id 
-            ? { ...pkg, status: 'removed' }
-            : pkg
-        )
-      );
-    }
-  };
-
-  const handleDismissAlert = (alertId) => {
-    setAlerts(prev => prev.filter(alert => alert.id !== alertId));
-  };
-
-  const handleDismissPackage = (packageId) => {
-    setPackages(prev => prev.filter(pkg => pkg.id !== packageId));
-  };
+  }, [config.socketUrl]);
 
   return (
     <Box sx={{ p: 2 }}>
       <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-        <LocalShippingIcon sx={{ mr: 1 }} />
+        <PackageIcon sx={{ mr: 1 }} />
         <Typography variant="h6">Package Detection</Typography>
-        <Badge 
-          badgeContent={packages.filter(pkg => pkg.status === 'new').length} 
-          color="primary" 
-          sx={{ ml: 2 }}
-        />
       </Box>
 
-      {/* Alerts Section */}
-      <Box sx={{ mb: 2 }}>
-        {alerts.map(alert => (
-          <Alert 
-            key={alert.id} 
-            severity={alert.type}
-            onClose={() => handleDismissAlert(alert.id)}
-            sx={{ mb: 1 }}
-          >
-            {alert.message}
-          </Alert>
-        ))}
-      </Box>
+      {error && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {error}
+        </Alert>
+      )}
 
-      {/* Packages List */}
-      <List>
-        {packages.map((pkg) => (
-          <ListItem
-            key={pkg.id}
-            secondaryAction={
-              <IconButton edge="end" onClick={() => handleDismissPackage(pkg.id)}>
-                <DeleteIcon />
-              </IconButton>
-            }
-            sx={{
-              bgcolor: 'background.paper',
-              mb: 1,
-              borderRadius: 1,
-              '&:hover': { bgcolor: 'action.hover' }
-            }}
-          >
-            <ListItemIcon>
-              {pkg.status === 'new' ? (
-                <WarningIcon color="warning" />
-              ) : (
-                <CheckCircleIcon color="success" />
-              )}
-            </ListItemIcon>
-            <ListItemText
-              primary={`Package #${pkg.id}`}
-              secondary={`Detected at ${pkg.timestamp} - ${pkg.location}`}
-            />
-          </ListItem>
-        ))}
-      </List>
+      {packages.length > 0 ? (
+        <Box>
+          <Typography variant="subtitle2" sx={{ mb: 1 }}>
+            Recent Detections:
+          </Typography>
+          {packages.map((packageId, index) => (
+            <Alert 
+              key={index} 
+              severity="info" 
+              sx={{ mb: 1 }}
+              icon={<PackageIcon />}
+            >
+              Package detected: {packageId}
+            </Alert>
+          ))}
+        </Box>
+      ) : (
+        <Typography color="text.secondary">
+          No recent package detections
+        </Typography>
+      )}
     </Box>
   );
 };

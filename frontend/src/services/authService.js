@@ -1,37 +1,64 @@
 import axios from 'axios';
+import { API_BASE_URL } from '../config';
 
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+// Set default base URL from config
+axios.defaults.baseURL = API_BASE_URL;
 
-export const login = (credentials) => {
-  return axios.post(`${API_URL}/auth/login`, credentials);
+// Set default auth header if token exists
+const token = localStorage.getItem('token');
+if (token) {
+  axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+}
+
+export const login = async (credentials) => {
+  try {
+    const response = await axios.post('/token', credentials);
+    const { access_token, token_type } = response.data;
+    const fullToken = `${token_type} ${access_token}`;
+    
+    // Store token
+    localStorage.setItem('token', fullToken);
+    
+    // Set default auth header
+    axios.defaults.headers.common['Authorization'] = fullToken;
+    
+    return response;
+  } catch (error) {
+    console.error('Login error:', error);
+    throw error;
+  }
 };
 
 export const logout = () => {
-  return axios.post(`${API_URL}/auth/logout`);
-};
-
-export const register = (userData) => {
-  return axios.post(`${API_URL}/auth/register`, userData);
+  localStorage.removeItem('token');
+  delete axios.defaults.headers.common['Authorization'];
 };
 
 export const getCurrentUser = () => {
-  return axios.get(`${API_URL}/auth/me`);
+  return axios.get(`/api/v1/users/me`);
 };
 
-export const refreshToken = () => {
-  return axios.post(`${API_URL}/auth/refresh-token`);
-};
-
-export const forgotPassword = (email) => {
-  return axios.post(`${API_URL}/auth/forgot-password`, { email });
-};
-
-export const resetPassword = (token, newPassword) => {
-  return axios.post(`${API_URL}/auth/reset-password`, { token, newPassword });
-};
-
-export const changePassword = (passwords) => {
-  return axios.post(`${API_URL}/auth/change-password`, passwords);
+// Development helper to set token directly
+export const setDevToken = async () => {
+  try {
+    const response = await axios.post('/token', {
+      username: 'test_user',
+      password: 'test_password'
+    }, {
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded'
+      }
+    });
+    
+    const { access_token, token_type } = response.data;
+    const fullToken = `${token_type} ${access_token}`;
+    
+    localStorage.setItem('token', fullToken);
+    axios.defaults.headers.common['Authorization'] = fullToken;
+  } catch (error) {
+    console.error('Failed to get development token:', error);
+    throw error;
+  }
 };
 
 // Axios interceptor for handling token refresh
@@ -39,11 +66,11 @@ axios.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
-    if (error.response.status === 401 && !originalRequest._retry) {
+    if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
       try {
-        const { data } = await refreshToken();
-        axios.defaults.headers.common['Authorization'] = `Bearer ${data.token}`;
+        // For development, get a fresh token
+        await setDevToken();
         return axios(originalRequest);
       } catch (refreshError) {
         return Promise.reject(refreshError);

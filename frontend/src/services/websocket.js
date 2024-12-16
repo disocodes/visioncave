@@ -7,7 +7,12 @@ class WebSocketService {
     this.reconnectTimeout = 3000;
   }
 
-  connect(url = `ws://${window.location.hostname}:8000/api/v1/ws`) {
+  connect(clientId = 'frontend-client', url = null) {
+    // If no URL provided, construct default URL with client ID
+    if (!url) {
+      url = `ws://${window.location.hostname}:8000/ws/${clientId}`;
+    }
+
     return new Promise((resolve, reject) => {
       try {
         this.ws = new WebSocket(url);
@@ -33,7 +38,7 @@ class WebSocketService {
 
         this.ws.onclose = () => {
           console.log('WebSocket Disconnected');
-          this.handleReconnect();
+          this.handleReconnect(clientId);
         };
 
         this.ws.onerror = (error) => {
@@ -48,11 +53,11 @@ class WebSocketService {
     });
   }
 
-  handleReconnect() {
+  handleReconnect(clientId) {
     if (this.reconnectAttempts < this.maxReconnectAttempts) {
       this.reconnectAttempts++;
       console.log(`Attempting to reconnect... (${this.reconnectAttempts}/${this.maxReconnectAttempts})`);
-      setTimeout(() => this.connect(), this.reconnectTimeout);
+      setTimeout(() => this.connect(clientId), this.reconnectTimeout);
     }
   }
 

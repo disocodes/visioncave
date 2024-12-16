@@ -21,74 +21,36 @@ import {
   Settings as SettingsIcon,
   ExpandLess,
   ExpandMore,
-  VideoLibrary as RecordingsIcon,
+  VideoLibrary as ArenaIcon,
   ArrowBack as BackIcon,
   Add as AddIcon,
-  Analytics as AnalyticsIcon,
-  Storage as DataIcon,
-  People as UsersIcon,
-  Business as SitesIcon,
-  Task as TaskIcon,
 } from '@mui/icons-material';
 
 const drawerWidth = 240;
 
 const navigationItems = [
   { 
-    section: 'Overview',
+    section: 'Main',
     items: [
       { text: 'Module Dashboard', icon: <DashboardIcon />, path: '/dashboard' },
-      { text: 'Analytics', icon: <AnalyticsIcon />, path: '/analytics' },
-    ]
-  },
-  {
-    section: 'Management',
-    items: [
       { 
         text: 'Task and Flow Management',
-        icon: <TaskIcon />,
+        icon: <BuildIcon />,
         subitems: [
-          { 
-            text: 'Tasks',
-            icon: <BuildIcon />,
-            subitems: [
-              { text: 'Task Builder', icon: <AddIcon />, path: '/task-builder' },
-              { text: 'Widget Builder', icon: <AddIcon />, path: '/widget-builder' },
-            ]
-          },
+          { text: 'Widget Builder', icon: <AddIcon />, path: '/widget-builder' },
+          { text: 'Task Builder', icon: <AddIcon />, path: '/task-builder' }
         ]
       },
       { 
-        text: 'Data Management',
-        icon: <DataIcon />,
+        text: 'Arena',
+        icon: <ArenaIcon />,
         subitems: [
-          { 
-            text: 'Recordings Arena',
-            icon: <RecordingsIcon />,
-            path: '/recordings-list',
-            subitems: [
-              { text: 'Recordings List', path: '/recordings-list' },
-              { text: 'Arena Viewer', path: '/recordings-arena/viewer' },
-              { text: 'Arena Settings', path: '/arena-settings' },
-            ]
-          },
-          { text: 'Models', icon: <ModelsIcon />, path: '/models' },
+          { text: 'Recordings List', icon: <ArenaIcon />, path: '/recordings-list' },
+          { text: 'Arena Settings', icon: <SettingsIcon />, path: '/arena-settings' }
         ]
       },
-      { 
-        text: 'Resource Management',
-        icon: <SitesIcon />,
-        subitems: [
-          { text: 'Sites', path: '/sites' },
-          { text: 'Cameras', icon: <CameraIcon />, path: '/camera-management' },
-          { text: 'Users', icon: <UsersIcon />, path: '/users' },
-        ]
-      },
-    ]
-  },
-  {
-    section: 'System',
-    items: [
+      { text: 'Camera Management', icon: <CameraIcon />, path: '/camera-management' },
+      { text: 'Models', icon: <ModelsIcon />, path: '/models' },
       { text: 'Settings', icon: <SettingsIcon />, path: '/settings' },
     ]
   }

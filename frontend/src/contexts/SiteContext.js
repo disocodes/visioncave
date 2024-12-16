@@ -3,6 +3,17 @@ import { getSites } from '../services/siteService';
 
 const SiteContext = createContext();
 
+// Default development site
+const DEV_SITE = {
+  id: 'dev-site-1',
+  name: 'Development Site',
+  type: 'residential',
+  status: 'active',
+  configuration: {
+    widgets: []
+  }
+};
+
 export const useSite = () => {
   const context = useContext(SiteContext);
   if (!context) {
@@ -12,8 +23,8 @@ export const useSite = () => {
 };
 
 export const SiteProvider = ({ children }) => {
-  const [sites, setSites] = useState([]);
-  const [selectedSite, setSelectedSite] = useState(null);
+  const [sites, setSites] = useState([DEV_SITE]);
+  const [selectedSite, setSelectedSite] = useState(DEV_SITE);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -25,9 +36,21 @@ export const SiteProvider = ({ children }) => {
     try {
       setLoading(true);
       const response = await getSites();
-      setSites(response.data);
+      // In development, always include the dev site
+      const allSites = [DEV_SITE, ...response.data];
+      setSites(allSites);
+      
+      // If no site is selected, select the dev site
+      if (!selectedSite) {
+        setSelectedSite(DEV_SITE);
+      }
+      
       setError(null);
     } catch (err) {
+      console.error('Error loading sites:', err);
+      // In case of error, ensure we at least have the dev site
+      setSites([DEV_SITE]);
+      setSelectedSite(DEV_SITE);
       setError(err.message);
     } finally {
       setLoading(false);
@@ -35,7 +58,7 @@ export const SiteProvider = ({ children }) => {
   };
 
   const selectSite = (siteId) => {
-    const site = sites.find(s => s.id === siteId);
+    const site = sites.find(s => s.id === siteId) || DEV_SITE;
     setSelectedSite(site);
   };
 

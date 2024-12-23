@@ -9,6 +9,7 @@ import sys
 import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 from app.models.sql_models import Base
+from app.core.config import settings
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -23,11 +24,9 @@ if config.config_file_name is not None:
 # for 'autogenerate' support
 target_metadata = Base.metadata
 
-# other values from the config, defined by the needs of env.py,
-# can be acquired:
-# my_important_option = config.get_main_option("my_important_option")
-# ... etc.
-
+# Set PostgreSQL URL based on docker-compose configuration
+SQLALCHEMY_DATABASE_URL = "postgresql://visioncave:visioncave@localhost:5432/visioncave"
+config.set_main_option("sqlalchemy.url", SQLALCHEMY_DATABASE_URL)
 
 def run_migrations_offline() -> None:
     """Run migrations in 'offline' mode.
@@ -39,7 +38,6 @@ def run_migrations_offline() -> None:
 
     Calls to context.execute() here emit the given string to the
     script output.
-
     """
     url = config.get_main_option("sqlalchemy.url")
     context.configure(
@@ -58,17 +56,24 @@ def run_migrations_online() -> None:
 
     In this scenario we need to create an Engine
     and associate a connection with the context.
-
     """
+    # Configure SQLAlchemy with PostgreSQL settings
+    configuration = config.get_section(config.config_ini_section)
+    configuration["sqlalchemy.url"] = SQLALCHEMY_DATABASE_URL
+    
     connectable = engine_from_config(
-        config.get_section(config.config_ini_section, {}),
+        configuration,
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
     )
 
     with connectable.connect() as connection:
         context.configure(
-            connection=connection, target_metadata=target_metadata
+            connection=connection,
+            target_metadata=target_metadata,
+            # Add useful options for migrations
+            compare_type=True,  # Compare column types
+            compare_server_default=True,  # Compare default values
         )
 
         with context.begin_transaction():

@@ -10,79 +10,11 @@ import {
   ListItemIcon,
   Typography
 } from '@mui/material';
-import { 
-  Add as AddIcon,
-  Videocam as VideocamIcon,
-  DirectionsCar as CarIcon,
-  Security as SecurityIcon,
-  Map as MapIcon
-} from '@mui/icons-material';
+import { Add as AddIcon } from '@mui/icons-material';
 import ModuleLayout from '../../components/layout/ModuleLayout';
 import WidgetContainer from '../../components/widgets/WidgetContainer';
 import { useWidget } from '../../contexts/WidgetContext';
-import { BASE_WIDGETS } from '../../config/baseWidgets';
-
-// Import mine site widgets
-import HeavyMachineryTrackingWidget from '../../components/widgets/mine/HeavyMachineryTrackingWidget';
-import SafetyMonitorWidget from '../../components/widgets/SafetyMonitorWidget';
-import ZoneManagementWidget from '../../components/widgets/ZoneManagementWidget';
-
-// Module-specific widgets with default configurations
-const MODULE_WIDGETS = [
-  {
-    id: 'camera',
-    title: 'Camera Stream',
-    icon: <VideocamIcon />,
-    type: 'camera_stream',
-    config: {
-      refreshInterval: 5,
-      alertThreshold: 90,
-      streamQuality: 'HD'
-    }
-  },
-  {
-    id: 'machinery',
-    title: 'Heavy Machinery Tracking',
-    icon: <CarIcon />,
-    type: 'machinery_tracking',
-    config: {
-      refreshInterval: 10,
-      alertThreshold: 85,
-      proximityThreshold: 20,
-      vehicleTypes: 'excavator,dump truck,loader',
-      maintenanceInterval: 24,
-      fuelMonitoring: true
-    }
-  },
-  {
-    id: 'safety',
-    title: 'Safety Monitor',
-    icon: <SecurityIcon />,
-    type: 'safety_monitor',
-    config: {
-      refreshInterval: 5,
-      alertThreshold: 95,
-      hazardLevel: 'medium',
-      monitoredConditions: 'gas,dust,temperature',
-      evacuationZones: 'A,B,C',
-      gasMonitoring: true
-    }
-  },
-  {
-    id: 'zones',
-    title: 'Zone Management',
-    icon: <MapIcon />,
-    type: 'zone_management',
-    config: {
-      refreshInterval: 30,
-      alertThreshold: 80,
-      zoneUpdateInterval: 300,
-      restrictedAreas: 'blast zone,hazardous materials,heavy machinery',
-      accessLevels: 'worker,supervisor,manager',
-      blastZones: 'north quarry,south pit'
-    }
-  }
-];
+import { getModuleWidgets, getWidgetConfig } from '../../config/baseWidgets';
 
 const MineSiteVision = () => {
   const { 
@@ -107,7 +39,7 @@ const MineSiteVision = () => {
     setAnchorEl(null);
   };
 
-  const handleAddWidget = async (widget) => {
+  const handleAddWidget = async (widgetConfig) => {
     if (!currentSiteId) {
       setError('No site selected. Please select a site first.');
       return;
@@ -115,17 +47,17 @@ const MineSiteVision = () => {
 
     try {
       await createWidget({
-        name: widget.title,
-        type: widget.type,
+        name: widgetConfig.title,
+        type: widgetConfig.id,
         site_id: currentSiteId,
-        config: widget.config,
-        description: `${widget.title} widget for site ${currentSiteId}`,
+        config: widgetConfig.configDefaults,
+        description: `${widgetConfig.title} widget for site ${currentSiteId}`,
         module: 'mine'
       });
       handleMenuClose();
     } catch (error) {
       console.error('Failed to add widget:', error);
-      setError('Failed to add widget. Please try again.');
+      setError(`Failed to add widget: ${error.message}`);
     }
   };
 
@@ -153,17 +85,15 @@ const MineSiteVision = () => {
     <ModuleLayout 
       title="Mine Site Vision"
       actions={addWidgetButton}
+      error={error}
+      onErrorClose={() => setError(null)}
     >
       <Box sx={{ p: 3 }}>
         <Grid container spacing={3}>
           {widgets.map((widget, index) => {
-            const Widget = widget.type === 'camera_stream' ? BASE_WIDGETS[0].component :
-                         widget.type === 'machinery_tracking' ? HeavyMachineryTrackingWidget :
-                         widget.type === 'safety_monitor' ? SafetyMonitorWidget :
-                         widget.type === 'zone_management' ? ZoneManagementWidget : null;
-            
-            if (!Widget) {
-              console.warn(`No component found for widget type: ${widget.type}`);
+            const widgetConfig = getWidgetConfig(widget.type);
+            if (!widgetConfig) {
+              console.error(`No configuration found for widget type: ${widget.type}`);
               return null;
             }
             
@@ -171,15 +101,14 @@ const MineSiteVision = () => {
               <Grid item xs={12} md={6} key={widget.id}>
                 <WidgetContainer
                   id={widget.id}
-                  title={widget.title || widget.name}
+                  title={widget.name || widgetConfig.title}
                   index={index}
                   position={widget.position}
                   config={widget.config}
                   metrics={widget.metrics}
                   alerts={widget.alerts}
-                  siteId={currentSiteId}
                 >
-                  <Widget config={widget.config} />
+                  <widgetConfig.component config={widget.config} />
                 </WidgetContainer>
               </Grid>
             );
@@ -199,17 +128,14 @@ const MineSiteVision = () => {
             horizontal: 'right',
           }}
         >
-          {MODULE_WIDGETS.map((widget) => (
+          {getModuleWidgets('mine').map((widgetConfig) => (
             <MenuItem 
-              key={widget.id}
-              onClick={() => handleAddWidget(widget)}
+              key={widgetConfig.id}
+              onClick={() => handleAddWidget(widgetConfig)}
               sx={{ minWidth: '200px' }}
             >
-              <ListItemIcon>
-                {widget.icon}
-              </ListItemIcon>
               <ListItemText 
-                primary={widget.title}
+                primary={widgetConfig.title}
                 secondary={
                   <Typography variant="caption" color="text.secondary">
                     Click to add

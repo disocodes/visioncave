@@ -4,16 +4,30 @@ from sqlalchemy import create_engine
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from ..models.sql_models import Base, User
+import logging
+import os
+from .config import settings
 
-# Create SQLite database engine
-SQLALCHEMY_DATABASE_URL = "sqlite:///./sql_app.db"
-engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False})
+# Set up logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+# Create PostgreSQL URL using settings
+SQLALCHEMY_DATABASE_URL = settings.POSTGRES_URL
+
+engine = create_engine(SQLALCHEMY_DATABASE_URL)
+
+# Create tables
+Base.metadata.create_all(bind=engine)
 
 # Database dependency
 def get_db() -> Generator:
     db = Session(engine)
     try:
         yield db
+    except Exception as e:
+        logger.error(f"Database session error: {str(e)}")
+        raise
     finally:
         db.close()
 
@@ -24,17 +38,28 @@ async def get_current_user(
     token: str = Depends(oauth2_scheme),
     db: Session = Depends(get_db)
 ) -> User:
-    # For development, create a test user if it doesn't exist
-    test_user = db.query(User).filter(User.username == "test_user").first()
-    if not test_user:
-        test_user = User(
-            username="test_user",
-            email="test@example.com",
-            hashed_password="mock_hashed_password",  # In production, use proper password hashing
-            is_active=True
+    try:
+        # For development, create a test user if it doesn't exist
+        test_user = db.query(User).filter(User.username == "test_user").first()
+        if not test_user:
+            from passlib.context import CryptContext
+            pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+            
+            test_user = User(
+                username="test_user",
+                email="test@example.com",
+                hashed_password=pwd_context.hash("test_password"),  # Properly hash the password
+                is_active=True
+            )
+            db.add(test_user)
+            db.commit()
+            db.refresh(test_user)
+            logger.info("Created test user")
+        
+        return test_user
+    except Exception as e:
+        logger.error(f"Error in get_current_user: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error accessing user data"
         )
-        db.add(test_user)
-        db.commit()
-        db.refresh(test_user)
-    
-    return test_user

@@ -1,48 +1,4 @@
 services:
-  backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    ports:
-      - "8000:8000"
-    depends_on:
-      - postgres
-      - mongodb
-      - kafka
-      - zookeeper
-    environment:
-      - PYTHONUNBUFFERED=1
-      - ENVIRONMENT=development
-    volumes:
-      - ./backend:/app
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-
-  frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-    ports:
-      - "3001:3001"
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
-    environment:
-      - NODE_ENV=development
-      - REACT_APP_API_URL=http://localhost:8000
-      - REACT_APP_WS_URL=ws://localhost:8000/ws
-      - CHOKIDAR_USEPOLLING=true
-    depends_on:
-      - backend
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3001"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-
   postgres:
     image: postgres:17
     environment:

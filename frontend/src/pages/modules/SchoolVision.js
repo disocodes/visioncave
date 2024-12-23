@@ -8,7 +8,9 @@ import {
   MenuItem,
   ListItemText,
   ListItemIcon,
-  Typography
+  Typography,
+  Alert,
+  Snackbar
 } from '@mui/material';
 import { 
   Add as AddIcon,
@@ -99,6 +101,10 @@ const SchoolVision = () => {
   }, [setCurrentModule]);
 
   const handleAddClick = (event) => {
+    if (!currentSiteId) {
+      setError('Please select a site before adding widgets');
+      return;
+    }
     setAnchorEl(event.currentTarget);
   };
 
@@ -107,11 +113,6 @@ const SchoolVision = () => {
   };
 
   const handleAddWidget = async (widget) => {
-    if (!currentSiteId) {
-      setError('No site selected. Please select a site first.');
-      return;
-    }
-
     try {
       await createWidget({
         name: widget.title,
@@ -122,10 +123,15 @@ const SchoolVision = () => {
         module: 'school'
       });
       handleMenuClose();
+      setError(null); // Clear any previous errors
     } catch (error) {
       console.error('Failed to add widget:', error);
       setError('Failed to add widget. Please try again.');
     }
+  };
+
+  const handleCloseError = () => {
+    setError(null);
   };
 
   const addWidgetButton = (
@@ -218,6 +224,17 @@ const SchoolVision = () => {
             </MenuItem>
           ))}
         </Menu>
+
+        <Snackbar 
+          open={Boolean(error)} 
+          autoHideDuration={6000} 
+          onClose={handleCloseError}
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+        >
+          <Alert onClose={handleCloseError} severity="error" sx={{ width: '100%' }}>
+            {error}
+          </Alert>
+        </Snackbar>
       </Box>
     </ModuleLayout>
   );

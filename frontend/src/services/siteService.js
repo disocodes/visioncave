@@ -1,6 +1,22 @@
 import axios from 'axios';
+import { API_BASE_URL } from '../config';
 
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000/api/v1';
+// Create axios instance with base URL
+const api = axios.create({
+  baseURL: `${API_BASE_URL}/api/v1`,
+  headers: {
+    'Content-Type': 'application/json'
+  }
+});
+
+// Add auth token from localStorage to requests
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem('token');
+  if (token) {
+    config.headers.Authorization = token;
+  }
+  return config;
+});
 
 // Error handling helper
 const handleApiError = (error) => {
@@ -26,51 +42,122 @@ const apiRequest = async (method, url, data = null) => {
   }
 };
 
-export const getSites = () => {
-  return apiRequest(axios.get, `${API_URL}/sites`);
+export const getSites = async () => {
+  try {
+    const response = await api.get('/sites');
+    return response.data;
+  } catch (error) {
+    console.error('Failed to get sites:', error);
+    throw error;
+  }
 };
 
-export const getSite = (id) => {
-  return apiRequest(axios.get, `${API_URL}/sites/${id}`);
+export const getSite = async (id) => {
+  try {
+    const response = await api.get(`/sites/${id}`);
+    return response.data;
+  } catch (error) {
+    console.error(`Failed to get site ${id}:`, error);
+    throw error;
+  }
 };
 
-export const createSite = (siteData) => {
-  return apiRequest(axios.post, `${API_URL}/sites`, siteData);
+export const createSite = async (siteData) => {
+  try {
+    const response = await api.post('/sites', siteData);
+    return response.data;
+  } catch (error) {
+    console.error('Failed to create site:', error);
+    throw error;
+  }
 };
 
-export const updateSite = (id, siteData) => {
-  return apiRequest(axios.put, `${API_URL}/sites/${id}`, siteData);
+export const updateSite = async (id, siteData) => {
+  try {
+    const response = await api.put(`/sites/${id}`, siteData);
+    return response.data;
+  } catch (error) {
+    console.error(`Failed to update site ${id}:`, error);
+    throw error;
+  }
 };
 
-export const deleteSite = (id) => {
-  return apiRequest(axios.delete, `${API_URL}/sites/${id}`);
+export const deleteSite = async (id) => {
+  try {
+    const response = await api.delete(`/sites/${id}`);
+    return response.data;
+  } catch (error) {
+    console.error(`Failed to delete site ${id}:`, error);
+    throw error;
+  }
 };
 
-export const getSiteCameras = (siteId) => {
-  return apiRequest(axios.get, `${API_URL}/sites/${siteId}/cameras`);
+export const getSiteCameras = async (siteId) => {
+  try {
+    const response = await api.get(`/sites/${siteId}/cameras`);
+    return response.data;
+  } catch (error) {
+    console.error(`Failed to get cameras for site ${siteId}:`, error);
+    throw error;
+  }
 };
 
-export const getSiteZones = (siteId) => {
-  return apiRequest(axios.get, `${API_URL}/sites/${siteId}/zones`);
+export const getSiteZones = async (siteId) => {
+  try {
+    const response = await api.get(`/sites/${siteId}/zones`);
+    return response.data;
+  } catch (error) {
+    console.error(`Failed to get zones for site ${siteId}:`, error);
+    throw error;
+  }
 };
 
-export const addCameraToSite = (siteId, cameraData) => {
-  return apiRequest(axios.post, `${API_URL}/sites/${siteId}/cameras`, cameraData);
+export const addCameraToSite = async (siteId, cameraData) => {
+  try {
+    const response = await api.post(`/sites/${siteId}/cameras`, cameraData);
+    return response.data;
+  } catch (error) {
+    console.error(`Failed to add camera to site ${siteId}:`, error);
+    throw error;
+  }
 };
 
-export const removeCameraFromSite = (siteId, cameraId) => {
-  return apiRequest(axios.delete, `${API_URL}/sites/${siteId}/cameras/${cameraId}`);
+export const removeCameraFromSite = async (siteId, cameraId) => {
+  try {
+    const response = await api.delete(`/sites/${siteId}/cameras/${cameraId}`);
+    return response.data;
+  } catch (error) {
+    console.error(`Failed to remove camera ${cameraId} from site ${siteId}:`, error);
+    throw error;
+  }
 };
 
-// Additional helper methods
-export const getSiteAnalytics = (siteId, params) => {
-  return apiRequest(axios.get, `${API_URL}/sites/${siteId}/analytics`, { params });
+export const getSiteAnalytics = async (siteId, params) => {
+  try {
+    const response = await api.get(`/sites/${siteId}/analytics`, { params });
+    return response.data;
+  } catch (error) {
+    console.error(`Failed to get analytics for site ${siteId}:`, error);
+    throw error;
+  }
 };
 
-export const getSiteStatus = (siteId) => {
-  return apiRequest(axios.get, `${API_URL}/sites/${siteId}/status`);
+export const getSiteStatus = async (siteId) => {
+  try {
+    const response = await api.get(`/sites/${siteId}/status`);
+    return response.data;
+  } catch (error) {
+    console.error(`Failed to get status for site ${siteId}:`, error);
+    throw error;
+  }
 };
 
-export const updateSiteConfiguration = (siteId, config) => {
-  return apiRequest(axios.put, `${API_URL}/sites/${siteId}/configuration`, config);
+export const updateSiteConfiguration = async (siteId, config) => {
+  try {
+    const response = await api.put(`/sites/${siteId}/configuration`, config);
+    return response.data;
+  } catch (error) {
+    console.error(`Failed to update configuration for site ${siteId}:`, error);
+    throw error;
+  }
 };

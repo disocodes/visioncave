@@ -122,4 +122,10 @@ class Site(Base):
     name = Column(String, index=True)
     location = Column(String)
     type = Column(String)  # residential, school, hospital, etc.
+    status = Column(String, default="active")  # active, inactive, maintenance
+    configuration = Column(JSON, default={"widgets": []})  # Site-specific configuration
     created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, nullable=True, onupdate=datetime.utcnow)
+
+    # Relationships
+    widgets = relationship("Widget", back_populates="site")

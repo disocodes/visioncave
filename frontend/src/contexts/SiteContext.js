@@ -1,13 +1,15 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { getSites } from '../services/siteService';
+import * as siteService from '../services/siteService';
+import { setDevToken } from '../services/authService';
 
 const SiteContext = createContext();
 
 // Default development site
 const DEV_SITE = {
-  id: 'dev-site-1',
+  id: 1,
   name: 'Development Site',
-  type: 'residential',
+  type: 'development',
+  location: 'Local Environment',
   status: 'active',
   configuration: {
     widgets: []
@@ -35,22 +37,34 @@ export const SiteProvider = ({ children }) => {
   const loadSites = async () => {
     try {
       setLoading(true);
-      const response = await getSites();
-      // In development, always include the dev site
-      const allSites = [DEV_SITE, ...response.data];
+      
+      // Ensure we have a development token before making API calls
+      if (process.env.NODE_ENV === 'development') {
+        await setDevToken();
+      }
+      
+      const response = await siteService.getSites();
+      
+      // Ensure we always have the dev site in development
+      const allSites = process.env.NODE_ENV === 'development' 
+        ? [DEV_SITE, ...response]
+        : response;
+      
       setSites(allSites);
       
-      // If no site is selected, select the dev site
+      // If no site is selected, select the first available site
       if (!selectedSite) {
-        setSelectedSite(DEV_SITE);
+        setSelectedSite(allSites[0]);
       }
       
       setError(null);
     } catch (err) {
       console.error('Error loading sites:', err);
-      // In case of error, ensure we at least have the dev site
-      setSites([DEV_SITE]);
-      setSelectedSite(DEV_SITE);
+      // In case of error, ensure we at least have the dev site in development
+      if (process.env.NODE_ENV === 'development') {
+        setSites([DEV_SITE]);
+        setSelectedSite(DEV_SITE);
+      }
       setError(err.message);
     } finally {
       setLoading(false);
@@ -58,8 +72,59 @@ export const SiteProvider = ({ children }) => {
   };
 
   const selectSite = (siteId) => {
-    const site = sites.find(s => s.id === siteId) || DEV_SITE;
-    setSelectedSite(site);
+    const site = sites.find(s => s.id === siteId);
+    if (site) {
+      setSelectedSite(site);
+    } else {
+      console.warn(`Site with id ${siteId} not found`);
+      // Fallback to dev site in development
+      if (process.env.NODE_ENV === 'development') {
+        setSelectedSite(DEV_SITE);
+      }
+    }
+  };
+
+  const createSite = async (siteData) => {
+    try {
+      const newSite = await siteService.createSite(siteData);
+      setSites(prev => [...prev, newSite]);
+      return newSite;
+    } catch (err) {
+      console.error('Error creating site:', err);
+      setError(err.message);
+      throw err;
+    }
+  };
+
+  const updateSite = async (siteId, siteData) => {
+    try {
+      const updatedSite = await siteService.updateSite(siteId, siteData);
+      setSites(prev => prev.map(site => 
+        site.id === siteId ? updatedSite : site
+      ));
+      if (selectedSite?.id === siteId) {
+        setSelectedSite(updatedSite);
+      }
+      return updatedSite;
+    } catch (err) {
+      console.error('Error updating site:', err);
+      setError(err.message);
+      throw err;
+    }
+  };
+
+  const deleteSite = async (siteId) => {
+    try {
+      await siteService.deleteSite(siteId);
+      setSites(prev => prev.filter(site => site.id !== siteId));
+      if (selectedSite?.id === siteId) {
+        setSelectedSite(sites[0] || DEV_SITE);
+      }
+    } catch (err) {
+      console.error('Error deleting site:', err);
+      setError(err.message);
+      throw err;
+    }
   };
 
   const value = {
@@ -69,6 +134,9 @@ export const SiteProvider = ({ children }) => {
     error,
     loadSites,
     selectSite,
+    createSite,
+    updateSite,
+    deleteSite
   };
 
   return (

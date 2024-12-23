@@ -1,11 +1,13 @@
 from pydantic import BaseModel
 from datetime import datetime
-from typing import Optional
+from typing import Optional, Dict, Any
 
 class SiteBase(BaseModel):
     name: str
     location: Optional[str] = None
     type: str
+    status: Optional[str] = "active"
+    configuration: Optional[Dict[str, Any]] = {"widgets": []}
 
 class SiteCreate(SiteBase):
     pass
@@ -13,6 +15,8 @@ class SiteCreate(SiteBase):
 class SiteUpdate(SiteBase):
     name: Optional[str] = None
     type: Optional[str] = None
+    status: Optional[str] = None
+    configuration: Optional[Dict[str, Any]] = None
 
 class SiteResponse(SiteBase):
     id: int

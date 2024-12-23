@@ -3,7 +3,14 @@ from fastapi import HTTPException
 import requests
 import json
 import os
+from sqlalchemy.orm import Session
 from ..models.sql_models import VLMModel
+import logging
+from requests.exceptions import RequestException
+
+# Set up logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 class VLMService:
     def __init__(self):
@@ -25,7 +32,7 @@ class VLMService:
             },
         }
 
-    async def get_available_models(self, db) -> List[Dict[str, Any]]:
+    async def get_available_models(self, db: Session) -> List[Dict[str, Any]]:
         """Get list of available VLM models."""
         try:
             # Get built-in models
@@ -56,10 +63,11 @@ class VLMService:
 
             return models
         except Exception as e:
-            raise HTTPException(status_code=400, detail=str(e))
+            logger.error(f"Error getting available models: {str(e)}")
+            raise HTTPException(status_code=500, detail="Error retrieving models")
 
     async def register_custom_model(
-        self, db, name: str, description: str, model_type: str,
+        self, db: Session, name: str, description: str, model_type: str,
         endpoint: str, model_path: str
     ) -> VLMModel:
         """Register a new custom VLM model."""
@@ -79,22 +87,33 @@ class VLMService:
             db.add(model)
             db.commit()
             db.refresh(model)
+            logger.info(f"Registered new custom model: {name}")
 
             return model
         except Exception as e:
             db.rollback()
+            logger.error(f"Error registering custom model: {str(e)}")
             raise HTTPException(status_code=400, detail=str(e))
 
     async def validate_model_endpoint(self, endpoint: str) -> bool:
         """Validate that a custom model endpoint is accessible."""
         try:
-            response = requests.get(f"{endpoint}/health", timeout=5)
-            return response.status_code == 200
-        except:
+            response = requests.get(
+                f"{endpoint}/health",
+                timeout=5,
+                headers={"Accept": "application/json"}
+            )
+            response.raise_for_status()
+            return True
+        except RequestException as e:
+            logger.warning(f"Model endpoint validation failed: {str(e)}")
+            return False
+        except Exception as e:
+            logger.error(f"Unexpected error validating endpoint: {str(e)}")
             return False
 
     async def process_frame(
-        self, frame_data: bytes, model_id: str, config: Dict[str, Any]
+        self, db: Session, frame_data: bytes, model_id: str, config: Dict[str, Any]
     ) -> Dict[str, Any]:
         """Process a frame using the specified VLM model."""
         try:
@@ -106,11 +125,12 @@ class VLMService:
             elif model_id.startswith('custom-'):
                 # Use custom model
                 return await self.process_with_custom_model(
-                    frame_data, model_id.replace('custom-', ''), config
+                    db, frame_data, model_id.replace('custom-', ''), config
                 )
             else:
                 raise ValueError(f"Unknown model ID: {model_id}")
         except Exception as e:
+            logger.error(f"Error processing frame: {str(e)}")
             raise HTTPException(status_code=400, detail=str(e))
 
     async def process_with_built_in_model(
@@ -129,77 +149,99 @@ class VLMService:
             else:
                 raise ValueError(f"Unsupported model type: {model_info['type']}")
         except Exception as e:
+            logger.error(f"Error with built-in model: {str(e)}")
             raise HTTPException(status_code=400, detail=str(e))
 
     async def process_with_custom_model(
-        self, frame_data: bytes, model_id: str, config: Dict[str, Any]
+        self, db: Session, frame_data: bytes, model_id: str, config: Dict[str, Any]
     ) -> Dict[str, Any]:
         """Process a frame using a custom model."""
         try:
             # Get model details from database
-            model = self.db.query(VLMModel).filter(VLMModel.id == model_id).first()
+            model = db.query(VLMModel).filter(VLMModel.id == model_id).first()
             if not model:
                 raise ValueError(f"Custom model not found: {model_id}")
 
             # Send request to custom model endpoint
-            response = requests.post(
-                f"{model.endpoint}/process",
-                files={'frame': frame_data},
-                data={'config': json.dumps(config)},
-                timeout=30
-            )
+            try:
+                response = requests.post(
+                    f"{model.endpoint}/process",
+                    files={'frame': frame_data},
+                    data={'config': json.dumps(config)},
+                    timeout=30,
+                    headers={"Accept": "application/json"}
+                )
+                response.raise_for_status()
+                return response.json()
+            except RequestException as e:
+                logger.error(f"Error communicating with custom model: {str(e)}")
+                raise HTTPException(
+                    status_code=503,
+                    detail="Model service unavailable"
+                )
 
-            if response.status_code != 200:
-                raise ValueError(f"Model processing failed: {response.text}")
-
-            return response.json()
+        except ValueError as e:
+            raise HTTPException(status_code=404, detail=str(e))
         except Exception as e:
-            raise HTTPException(status_code=400, detail=str(e))
+            logger.error(f"Unexpected error with custom model: {str(e)}")
+            raise HTTPException(status_code=500, detail="Internal server error")
 
     async def run_detection(
         self, frame_data: bytes, config: Dict[str, Any]
     ) -> Dict[str, Any]:
         """Run object detection on a frame."""
-        # TODO: Implement actual detection logic
-        return {
-            'type': 'detection',
-            'objects': [
-                {
-                    'class': 'person',
-                    'confidence': 0.95,
-                    'bbox': [100, 100, 200, 200]
-                },
-            ]
-        }
+        try:
+            # TODO: Implement actual detection logic
+            return {
+                'type': 'detection',
+                'objects': [
+                    {
+                        'class': 'person',
+                        'confidence': 0.95,
+                        'bbox': [100, 100, 200, 200]
+                    },
+                ]
+            }
+        except Exception as e:
+            logger.error(f"Error in detection: {str(e)}")
+            raise HTTPException(status_code=500, detail="Detection failed")
 
     async def run_segmentation(
         self, frame_data: bytes, config: Dict[str, Any]
     ) -> Dict[str, Any]:
         """Run segmentation on a frame."""
-        # TODO: Implement actual segmentation logic
-        return {
-            'type': 'segmentation',
-            'masks': [
-                {
-                    'class': 'person',
-                    'confidence': 0.95,
-                    'mask': [[0, 0, 1, 1], [1, 1, 0, 0]]
-                },
-            ]
-        }
+        try:
+            # TODO: Implement actual segmentation logic
+            return {
+                'type': 'segmentation',
+                'masks': [
+                    {
+                        'class': 'person',
+                        'confidence': 0.95,
+                        'mask': [[0, 0, 1, 1], [1, 1, 0, 0]]
+                    },
+                ]
+            }
+        except Exception as e:
+            logger.error(f"Error in segmentation: {str(e)}")
+            raise HTTPException(status_code=500, detail="Segmentation failed")
 
     async def run_multimodal(
         self, frame_data: bytes, config: Dict[str, Any]
     ) -> Dict[str, Any]:
         """Run multimodal analysis on a frame."""
-        # TODO: Implement actual multimodal analysis logic
-        return {
-            'type': 'multimodal',
-            'description': 'A person walking on the street',
-            'confidence': 0.92,
-            'attributes': {
-                'time_of_day': 'daytime',
-                'weather': 'sunny',
-                'activity': 'walking'
+        try:
+            # TODO: Implement actual multimodal analysis logic
+            return {
+                'type': 'multimodal',
+                'description': 'A person walking on the street',
+                'confidence': 0.92,
+                'attributes': {
+                    'time_of_day': 'daytime',
+                    'weather': 'sunny',
+                    'activity': 'walking'
+                }
             }
-        }
+        except Exception as e:
+            logger.error(f"Error in multimodal analysis: {str(e)}")
+            raise HTTPException(status_code=500, detail="Multimodal analysis failed")

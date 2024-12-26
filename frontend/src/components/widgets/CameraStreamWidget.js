@@ -8,16 +8,15 @@ import {
   Select,
   MenuItem,
   FormControl,
-  InputLabel,
 } from '@mui/material';
 import {
   Videocam,
   VideocamOff,
   FullscreenExit,
   Fullscreen,
-  Settings,
 } from '@mui/icons-material';
 import { useWidget } from '../../contexts/WidgetContext';
+import withBaseWidget from './withBaseWidget';
 
 const CameraStreamWidget = ({ config = {} }) => {
   const { currentModule } = useWidget();
@@ -178,4 +177,7 @@ const CameraStreamWidget = ({ config = {} }) => {
   );
 };
 
-export default CameraStreamWidget;
+export default withBaseWidget(CameraStreamWidget, {
+  streamQuality: 'HD',
+  enableAudio: false
+});

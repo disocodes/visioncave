@@ -18,6 +18,13 @@ const initialState = {
     congestionChange: 0,
     hourlyData: [],
     lastUpdated: null
+  },
+  occupancy: {
+    current: 0,
+    max: 100,
+    history: [],
+    zones: {},
+    lastUpdated: null
   }
 };
 
@@ -55,6 +62,13 @@ export const widgetDataSlice = createSlice({
         ...action.payload,
         lastUpdated: new Date().toISOString()
       };
+    },
+    updateOccupancyData: (state, action) => {
+      state.occupancy = {
+        ...state.occupancy,
+        ...action.payload,
+        lastUpdated: new Date().toISOString()
+      };
     }
   },
 });
@@ -67,7 +81,8 @@ export const {
   updateZone,
   addAlert,
   clearAlerts,
-  updateTrafficFlowData
+  updateTrafficFlowData,
+  updateOccupancyData
 } = widgetDataSlice.actions;
 
 export default widgetDataSlice.reducer;

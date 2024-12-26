@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Box, 
   Grid, 
@@ -10,23 +10,18 @@ import {
   ListItemIcon,
   Typography
 } from '@mui/material';
-import { 
+import {
   Add as AddIcon,
-  Videocam as VideocamIcon,
-  People as PeopleIcon,
   LocalShipping as PackageIcon,
-  Security as SecurityIcon
+  Security as SecurityIcon,
+  People as OccupancyIcon,
+  Videocam as CameraIcon
 } from '@mui/icons-material';
 import ModuleLayout from '../../components/layout/ModuleLayout';
 import WidgetContainer from '../../components/widgets/WidgetContainer';
 import { useWidget } from '../../contexts/WidgetContext';
-import { BASE_WIDGETS } from '../../config/baseWidgets';
+import { getWidgetConfig } from '../../config/baseWidgets';
 import { WS_BASE_URL } from '../../config';
-
-// Import residential widgets
-import OccupancyTrackingWidget from '../../components/widgets/residential/OccupancyTrackingWidget';
-import PackageDetectionWidget from '../../components/widgets/residential/PackageDetectionWidget';
-import ResidentialSecurityWidget from '../../components/widgets/residential/ResidentialSecurityWidget';
 
 // Generate a unique client ID for websocket connections
 const generateClientId = () => `client_${Math.random().toString(36).substr(2, 9)}`;
@@ -36,26 +31,12 @@ const MODULE_WIDGETS = [
   {
     id: 'camera',
     title: 'Camera Stream',
-    icon: <VideocamIcon />,
+    icon: <CameraIcon />,
     type: 'camera_stream',
     config: {
       refreshInterval: 5,
       alertThreshold: 90,
-      streamQuality: 'HD',
-      enableAudio: true,
-      recordStream: false
-    }
-  },
-  {
-    id: 'occupancy',
-    title: 'Occupancy Tracking',
-    icon: <PeopleIcon />,
-    type: 'occupancy_tracking',
-    config: {
-      refreshInterval: 30,
-      alertThreshold: 80,
-      occupancyLimit: 10,
-      zoneNames: 'Living Room,Kitchen,Entrance'
+      streamQuality: 'HD'
     }
   },
   {
@@ -64,23 +45,34 @@ const MODULE_WIDGETS = [
     icon: <PackageIcon />,
     type: 'package_detection',
     config: {
-      refreshInterval: 15,
-      alertThreshold: 90,
+      refreshInterval: 5,
+      alertThreshold: 85,
       detectionConfidence: 0.8,
-      notificationDelay: 5,
-      socketUrl: `${WS_BASE_URL}/package-detection/${generateClientId()}`
+      notifyOnDetection: true
     }
   },
   {
     id: 'security',
-    title: 'Suspicious Activity Alert',
+    title: 'Security Monitor',
     icon: <SecurityIcon />,
-    type: 'security_alert',
+    type: 'residential_security',
     config: {
-      refreshInterval: 10,
-      alertThreshold: 75,
-      motionSensitivity: 0.6,
-      restrictedZones: 'front door,back door,windows'
+      refreshInterval: 5,
+      alertThreshold: 95,
+      motionSensitivity: 'medium',
+      notifyOnMotion: true
+    }
+  },
+  {
+    id: 'occupancy',
+    title: 'Occupancy Tracking',
+    icon: <OccupancyIcon />,
+    type: 'occupancy_tracking',
+    config: {
+      refreshInterval: 30,
+      alertThreshold: 80,
+      occupancyLimit: 10,
+      trackingZones: 'entrance,living room,kitchen'
     }
   }
 ];
@@ -90,7 +82,6 @@ const ResidentialVision = () => {
     widgets, 
     setCurrentModule, 
     createWidget, 
-    handleWidgetReorder, 
     currentSiteId 
   } = useWidget();
   const [anchorEl, setAnchorEl] = useState(null);
@@ -115,16 +106,11 @@ const ResidentialVision = () => {
     }
 
     try {
-      // For package detection widget, ensure socketUrl is set with a unique client ID
-      const config = widget.type === 'package_detection' 
-        ? { ...widget.config, socketUrl: `${WS_BASE_URL}/package-detection/${generateClientId()}` }
-        : widget.config;
-
       await createWidget({
         name: widget.title,
         type: widget.type,
         site_id: currentSiteId,
-        config,
+        config: widget.config,
         description: `${widget.title} widget for site ${currentSiteId}`,
         module: 'residential'
       });
@@ -156,52 +142,35 @@ const ResidentialVision = () => {
   );
 
   const renderWidget = (widget, index) => {
-    let Widget;
-    let widgetProps = { config: widget.config };
-
-    switch (widget.type) {
-      case 'camera_stream':
-        Widget = BASE_WIDGETS[0].component;
-        break;
-      case 'occupancy_tracking':
-        Widget = OccupancyTrackingWidget;
-        break;
-      case 'package_detection':
-        Widget = PackageDetectionWidget;
-        // Ensure socketUrl is available with a unique client ID if not already set
-        if (!widget.config?.socketUrl) {
-          widgetProps = {
-            config: {
-              ...widget.config,
-              socketUrl: `${WS_BASE_URL}/package-detection/${generateClientId()}`
-            }
-          };
-        }
-        break;
-      case 'security_alert':
-        Widget = ResidentialSecurityWidget;
-        break;
-      default:
-        console.warn(`No component found for widget type: ${widget.type}`);
-        return null;
+    const widgetConfig = getWidgetConfig(widget.type);
+    if (!widgetConfig) {
+      console.warn(`No configuration found for widget type: ${widget.type}`);
+      return null;
     }
 
-    if (!Widget) {
-      console.error(`Widget component not found for type: ${widget.type}`);
-      return null;
+    const Widget = widgetConfig.component;
+    const widgetProps = {
+      config: widget.config
+    };
+
+    // Add socketUrl for package detection widgets
+    if (widget.type === 'package_detection') {
+      widgetProps.config = {
+        ...widgetProps.config,
+        socketUrl: `${WS_BASE_URL}/package-detection/${generateClientId()}`
+      };
     }
 
     return (
       <Grid item xs={12} md={6} lg={4} key={widget.id}>
         <WidgetContainer
           id={widget.id}
-          title={widget.title || widget.name}
+          title={widget.title}
           index={index}
           position={widget.position}
           config={widget.config}
           metrics={widget.metrics}
           alerts={widget.alerts}
-          siteId={currentSiteId}
         >
           <Widget {...widgetProps} />
         </WidgetContainer>
@@ -212,47 +181,49 @@ const ResidentialVision = () => {
   return (
     <ModuleLayout 
       title="Residential Vision"
+      module="residential"
       actions={addWidgetButton}
+      error={error}
+      onErrorClose={() => setError(null)}
     >
       <Box sx={{ p: 3 }}>
         <Grid container spacing={3}>
           {widgets.map((widget, index) => renderWidget(widget, index))}
         </Grid>
-
-        <Menu
-          anchorEl={anchorEl}
-          open={Boolean(anchorEl)}
-          onClose={handleMenuClose}
-          anchorOrigin={{
-            vertical: 'bottom',
-            horizontal: 'right',
-          }}
-          transformOrigin={{
-            vertical: 'top',
-            horizontal: 'right',
-          }}
-        >
-          {MODULE_WIDGETS.map((widget) => (
-            <MenuItem 
-              key={widget.id}
-              onClick={() => handleAddWidget(widget)}
-              sx={{ minWidth: '200px' }}
-            >
-              <ListItemIcon>
-                {widget.icon}
-              </ListItemIcon>
-              <ListItemText 
-                primary={widget.title}
-                secondary={
-                  <Typography variant="caption" color="text.secondary">
-                    Click to add
-                  </Typography>
-                }
-              />
-            </MenuItem>
-          ))}
-        </Menu>
       </Box>
+      <Menu
+        anchorEl={anchorEl}
+        open={Boolean(anchorEl)}
+        onClose={handleMenuClose}
+        anchorOrigin={{
+          vertical: 'bottom',
+          horizontal: 'right',
+        }}
+        transformOrigin={{
+          vertical: 'top',
+          horizontal: 'right',
+        }}
+      >
+        {MODULE_WIDGETS.map((widget) => (
+          <MenuItem 
+            key={widget.id}
+            onClick={() => handleAddWidget(widget)}
+            sx={{ minWidth: '200px' }}
+          >
+            <ListItemIcon>
+              {widget.icon}
+            </ListItemIcon>
+            <ListItemText 
+              primary={widget.title}
+              secondary={
+                <Typography variant="caption" color="text.secondary">
+                  Click to add
+                </Typography>
+              }
+            />
+          </MenuItem>
+        ))}
+      </Menu>
     </ModuleLayout>
   );
 };

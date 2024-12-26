@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Box, Typography, Alert } from '@mui/material';
 import { LocalShipping as PackageIcon } from '@mui/icons-material';
+import withBaseWidget from '../withBaseWidget';
 
 const PackageDetectionWidget = ({ config }) => {
   const [packages, setPackages] = useState([]);
@@ -98,4 +99,6 @@ const PackageDetectionWidget = ({ config }) => {
   );
 };
 
-export default PackageDetectionWidget;
+export default withBaseWidget(PackageDetectionWidget, {
+  socketUrl: 'ws://localhost:8000/ws/package-detection'
+});

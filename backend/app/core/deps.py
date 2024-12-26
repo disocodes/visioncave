@@ -12,10 +12,11 @@ from .config import settings
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Create PostgreSQL URL using settings
-SQLALCHEMY_DATABASE_URL = settings.POSTGRES_URL
-
-engine = create_engine(SQLALCHEMY_DATABASE_URL)
+# Create PostgreSQL connection
+engine = create_engine(
+    settings.POSTGRES_URL,
+    pool_pre_ping=True
+)
 
 # Create tables
 Base.metadata.create_all(bind=engine)

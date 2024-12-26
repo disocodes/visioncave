@@ -51,11 +51,26 @@ const ArenaViewer = () => {
   const [videoUrl, setVideoUrl] = useState(null);
   const [isDrawing, setIsDrawing] = useState(false);
   const [currentRegion, setCurrentRegion] = useState(null);
+  const [storageProvider, setStorageProvider] = useState('local');
+  const [vlmConfig, setVlmConfig] = useState({
+    enabled: false,
+    model: 'default',
+    confidence: 0.5
+  });
+  const [filterConfig, setFilterConfig] = useState({
+    timeRange: null,
+    eventTypes: [],
+    confidence: 0.5,
+    regions: []
+  });
+  const [selectedModels, setSelectedModels] = useState([]);
   const [expandedSections, setExpandedSections] = useState({
     filters: false,
     regions: false,
     tasks: false,
     models: false,
+    storage: false,
+    vlm: false
   });
 
   useEffect(() => {
@@ -65,7 +80,19 @@ const ArenaViewer = () => {
     }
     fetchRecordingData();
     setupCanvas();
+    fetchAvailableModels();
   }, [recordingId, navigate]);
+
+  const fetchAvailableModels = async () => {
+    try {
+      // Fetch available CV models (OpenCV, YOLO, etc.)
+      const cvModels = await recordingsService.getAvailableModels();
+      setModels(cvModels);
+    } catch (error) {
+      console.error('Error fetching models:', error);
+      setError('Failed to load available models');
+    }
+  };
 
   const setupCanvas = () => {
     if (canvasRef.current && videoRef.current) {
@@ -276,7 +303,33 @@ const ArenaViewer = () => {
           </ListItem>
           <Collapse in={expandedSections.filters} timeout="auto" unmountOnExit>
             <List component="div" disablePadding>
-              {/* Add filter controls here */}
+              <ListItem>
+                <TextField
+                  label="Time Range"
+                  type="datetime-local"
+                  value={filterConfig.timeRange}
+                  onChange={(e) => setFilterConfig({
+                    ...filterConfig,
+                    timeRange: e.target.value
+                  })}
+                  fullWidth
+                  size="small"
+                />
+              </ListItem>
+              <ListItem>
+                <TextField
+                  label="Confidence Threshold"
+                  type="number"
+                  value={filterConfig.confidence}
+                  onChange={(e) => setFilterConfig({
+                    ...filterConfig,
+                    confidence: parseFloat(e.target.value)
+                  })}
+                  inputProps={{ min: 0, max: 1, step: 0.1 }}
+                  fullWidth
+                  size="small"
+                />
+              </ListItem>
             </List>
           </Collapse>
 
@@ -355,7 +408,95 @@ const ArenaViewer = () => {
           </ListItem>
           <Collapse in={expandedSections.models} timeout="auto" unmountOnExit>
             <List component="div" disablePadding>
-              {/* Add model selection here */}
+              {models.map((model) => (
+                <ListItem key={model.id}>
+                  <FormControl fullWidth size="small">
+                    <InputLabel>{model.name}</InputLabel>
+                    <Select
+                      value={selectedModels.includes(model.id)}
+                      onChange={(e) => {
+                        if (e.target.value) {
+                          setSelectedModels([...selectedModels, model.id]);
+                        } else {
+                          setSelectedModels(selectedModels.filter(id => id !== model.id));
+                        }
+                      }}
+                    >
+                      <MenuItem value={false}>Disabled</MenuItem>
+                      <MenuItem value={true}>Enabled</MenuItem>
+                    </Select>
+                  </FormControl>
+                </ListItem>
+              ))}
+            </List>
+          </Collapse>
+
+          {/* Storage Provider Section */}
+          <ListItem button onClick={() => handleSectionExpand('storage')}>
+            <ListItemIcon>
+              <BuildIcon />
+            </ListItemIcon>
+            <ListItemText primary="Storage" />
+            {expandedSections.storage ? <ExpandLess /> : <ExpandMore />}
+          </ListItem>
+          <Collapse in={expandedSections.storage} timeout="auto" unmountOnExit>
+            <List component="div" disablePadding>
+              <ListItem>
+                <FormControl fullWidth size="small">
+                  <InputLabel>Storage Provider</InputLabel>
+                  <Select
+                    value={storageProvider}
+                    onChange={(e) => setStorageProvider(e.target.value)}
+                  >
+                    <MenuItem value="local">Local Storage</MenuItem>
+                    <MenuItem value="google-drive">Google Drive</MenuItem>
+                    <MenuItem value="aws-s3">AWS S3</MenuItem>
+                    <MenuItem value="nextcloud">Nextcloud</MenuItem>
+                  </Select>
+                </FormControl>
+              </ListItem>
+            </List>
+          </Collapse>
+
+          {/* VLM Tools Section */}
+          <ListItem button onClick={() => handleSectionExpand('vlm')}>
+            <ListItemIcon>
+              <BuildIcon />
+            </ListItemIcon>
+            <ListItemText primary="VLM Tools" />
+            {expandedSections.vlm ? <ExpandLess /> : <ExpandMore />}
+          </ListItem>
+          <Collapse in={expandedSections.vlm} timeout="auto" unmountOnExit>
+            <List component="div" disablePadding>
+              <ListItem>
+                <FormControl fullWidth size="small">
+                  <InputLabel>VLM Model</InputLabel>
+                  <Select
+                    value={vlmConfig.model}
+                    onChange={(e) => setVlmConfig({
+                      ...vlmConfig,
+                      model: e.target.value
+                    })}
+                  >
+                    <MenuItem value="default">Default Model</MenuItem>
+                    <MenuItem value="custom">Custom Model</MenuItem>
+                  </Select>
+                </FormControl>
+              </ListItem>
+              <ListItem>
+                <TextField
+                  label="Confidence Threshold"
+                  type="number"
+                  value={vlmConfig.confidence}
+                  onChange={(e) => setVlmConfig({
+                    ...vlmConfig,
+                    confidence: parseFloat(e.target.value)
+                  })}
+                  inputProps={{ min: 0, max: 1, step: 0.1 }}
+                  fullWidth
+                  size="small"
+                />
+              </ListItem>
             </List>
           </Collapse>
         </List>

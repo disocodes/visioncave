@@ -25,15 +25,35 @@ class Settings(BaseSettings):
         "MONGODB_URL",
         "mongodb://localhost:27017/visioncave"
     )
+    
+    @property
+    def MONGODB_CONNECTION_URL(self) -> str:
+        from urllib.parse import quote_plus, urlparse, urlunparse
+        if '@' in self.MONGODB_URL:
+            # Parse the URL
+            parsed = urlparse(self.MONGODB_URL)
+            # Extract credentials
+            userpass = parsed.netloc.split('@')[0]
+            if ':' in userpass:
+                username, password = userpass.split(':')
+                # URL encode the password
+                encoded_password = quote_plus(password)
+                # Reconstruct netloc with encoded password
+                netloc = f"{username}:{encoded_password}@{parsed.netloc.split('@')[1]}"
+                # Reconstruct URL
+                return urlunparse(parsed._replace(netloc=netloc))
+        return self.MONGODB_URL
     POSTGRES_USER: str = os.getenv("POSTGRES_USER", "visioncave")
     POSTGRES_PASSWORD: str = os.getenv("POSTGRES_PASSWORD", "visioncave")
-    POSTGRES_HOST: str = os.getenv("POSTGRES_HOST", "postgres")  # Using container name
+    POSTGRES_HOST: str = os.getenv("POSTGRES_HOST", "localhost")  # Using localhost since we're connecting to containerized postgres
     POSTGRES_PORT: str = os.getenv("POSTGRES_PORT", "5432")
     POSTGRES_DB: str = os.getenv("POSTGRES_DB", "visioncave")
     
     @property
     def POSTGRES_URL(self) -> str:
-        return f"postgresql://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
+        from urllib.parse import quote_plus
+        password = quote_plus(self.POSTGRES_PASSWORD)
+        return f"postgresql://{self.POSTGRES_USER}:{password}@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
     
     # JWT Settings
     SECRET_KEY: str = os.getenv("SECRET_KEY")
@@ -61,6 +81,43 @@ class Settings(BaseSettings):
     
     # Rate Limiting
     RATE_LIMIT_PER_MINUTE: int = int(os.getenv("RATE_LIMIT_PER_MINUTE", "60"))
+    
+    # Redis Configuration
+    REDIS_HOST: str = os.getenv("REDIS_HOST", "localhost")  # Using localhost since we're connecting to containerized redis
+    REDIS_PORT: int = int(os.getenv("REDIS_PORT", "6379"))
+    REDIS_DB: int = int(os.getenv("REDIS_DB", "0"))
+    
+    @property
+    def REDIS_URL(self) -> str:
+        return f"redis://{self.REDIS_HOST}:{self.REDIS_PORT}/{self.REDIS_DB}"
+    
+    # Celery Configuration
+    @property
+    def CELERY_BROKER_URL(self) -> str:
+        return os.getenv("CELERY_BROKER_URL", self.REDIS_URL)
+    
+    @property
+    def CELERY_RESULT_BACKEND(self) -> str:
+        return os.getenv("CELERY_RESULT_BACKEND", self.REDIS_URL)
+    
+    # Celery Task Settings
+    CELERY_TASK_TRACK_STARTED: bool = True
+    CELERY_TASK_TIME_LIMIT: int = 3600  # 1 hour
+    CELERY_TASK_SOFT_TIME_LIMIT: int = 3600
+    CELERY_WORKER_PREFETCH_MULTIPLIER: int = 1
+    CELERY_WORKER_MAX_TASKS_PER_CHILD: int = 50
+
+    # Model Settings
+    USE_HUGGINGFACE_MODELS: bool = os.getenv("USE_HUGGINGFACE_MODELS", "true").lower() == "true"
+    HUGGINGFACE_MODEL_MAPPING: dict = {
+        "yolov5": "hustvl/yolos-tiny",  # YOLOS is HF's YOLO-like model
+        "poseDetection": "microsoft/movenet-thunder",
+        "faceDetection": "dlib/face-detection",
+        "activityRecognition": "microsoft/resnet-50",
+        "vehicleAnalysis": "microsoft/resnet-50",
+        "ppeDetection": "microsoft/resnet-50",
+        "anomalyDetection": "microsoft/resnet-50"
+    }
     
     class Config:
         case_sensitive = True

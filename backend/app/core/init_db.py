@@ -36,13 +36,56 @@ def init_test_data(db: Session):
                 logger.error(f"Error creating test user: {str(e)}")
                 raise
 
+        # Create development site if not exists
+        dev_site = db.query(Site).filter(Site.name == "Development Site").first()
+        if not dev_site:
+            dev_site = Site(
+                id=1,  # Explicitly set id to match frontend DEV_SITE
+                name="Development Site",
+                location="Local Environment",
+                type="development",
+                status="active",
+                configuration={"widgets": []}
+            )
+            db.add(dev_site)
+            try:
+                db.commit()
+                db.refresh(dev_site)
+                logger.info("Development site created successfully")
+            except SQLAlchemyError as e:
+                db.rollback()
+                logger.error(f"Error creating development site: {str(e)}")
+                raise
+
+        # Create test mine site if not exists
+        test_mine = db.query(Site).filter(Site.name == "Test Mine").first()
+        if not test_mine:
+            test_mine = Site(
+                name="Test Mine",
+                location="321 Mining Road",
+                type="mine",
+                status="active",
+                configuration={"widgets": []}
+            )
+            db.add(test_mine)
+            try:
+                db.commit()
+                db.refresh(test_mine)
+                logger.info("Test mine site created successfully")
+            except SQLAlchemyError as e:
+                db.rollback()
+                logger.error(f"Error creating test mine site: {str(e)}")
+                raise
+
         # Create test hospital site if not exists
         test_hospital = db.query(Site).filter(Site.name == "Test Hospital").first()
         if not test_hospital:
             test_hospital = Site(
                 name="Test Hospital",
                 location="123 Medical Center Dr",
-                type="hospital"
+                type="hospital",
+                status="active",
+                configuration={"widgets": []}
             )
             db.add(test_hospital)
             try:
@@ -60,7 +103,9 @@ def init_test_data(db: Session):
             test_residential = Site(
                 name="Test Residence",
                 location="456 Home Ave",
-                type="residential"
+                type="residential",
+                status="active",
+                configuration={"widgets": []}
             )
             db.add(test_residential)
             try:
@@ -78,7 +123,9 @@ def init_test_data(db: Session):
             test_school = Site(
                 name="Test School",
                 location="789 Education Blvd",
-                type="school"
+                type="school",
+                status="active",
+                configuration={"widgets": []}
             )
             db.add(test_school)
             try:

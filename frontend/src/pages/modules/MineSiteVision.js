@@ -8,12 +8,14 @@ import {
   MenuItem,
   ListItemText,
   ListItemIcon,
-  Typography
+  Typography,
+  CircularProgress
 } from '@mui/material';
 import { Add as AddIcon } from '@mui/icons-material';
 import ModuleLayout from '../../components/layout/ModuleLayout';
 import WidgetContainer from '../../components/widgets/WidgetContainer';
 import { useWidget } from '../../contexts/WidgetContext';
+import { useSite } from '../../contexts/SiteContext';
 import { getModuleWidgets, getWidgetConfig } from '../../config/baseWidgets';
 
 const MineSiteVision = () => {
@@ -22,16 +24,27 @@ const MineSiteVision = () => {
     setCurrentModule, 
     createWidget, 
     handleWidgetReorder, 
-    currentSiteId 
+    currentSiteId,
+    loading: widgetLoading 
   } = useWidget();
+  const { selectedSite } = useSite();
   const [anchorEl, setAnchorEl] = useState(null);
   const [error, setError] = useState(null);
+  const [isCreatingWidget, setIsCreatingWidget] = useState(false);
 
   useEffect(() => {
     setCurrentModule('mine');
   }, [setCurrentModule]);
 
   const handleAddClick = (event) => {
+    if (!selectedSite) {
+      setError('Please select a site first');
+      return;
+    }
+    if (selectedSite.status !== 'active') {
+      setError('Selected site is not active');
+      return;
+    }
     setAnchorEl(event.currentTarget);
   };
 
@@ -40,44 +53,64 @@ const MineSiteVision = () => {
   };
 
   const handleAddWidget = async (widgetConfig) => {
-    if (!currentSiteId) {
+    if (!selectedSite?.id) {
       setError('No site selected. Please select a site first.');
       return;
     }
 
+    if (selectedSite.status !== 'active') {
+      setError('Cannot add widgets to an inactive site');
+      return;
+    }
+
     try {
+      setIsCreatingWidget(true);
+      setError(null);
+      
       await createWidget({
         name: widgetConfig.title,
         type: widgetConfig.id,
-        site_id: currentSiteId,
+        site_id: selectedSite.id,
         config: widgetConfig.configDefaults,
-        description: `${widgetConfig.title} widget for site ${currentSiteId}`,
-        module: 'mine'
+        description: `${widgetConfig.title} widget for ${selectedSite.name}`,
+        module: 'mine',
+        status: 'active'
       });
+      
       handleMenuClose();
+      console.log(`Successfully added ${widgetConfig.title} widget`);
     } catch (error) {
       console.error('Failed to add widget:', error);
       setError(`Failed to add widget: ${error.message}`);
+    } finally {
+      setIsCreatingWidget(false);
     }
   };
 
   const addWidgetButton = (
-    <Tooltip title="Add Widget">
-      <IconButton 
-        color="primary"
-        onClick={handleAddClick}
-        size="large"
-        sx={{
-          backgroundColor: 'primary.main',
-          color: 'white',
-          '&:hover': {
-            backgroundColor: 'primary.dark',
-          },
-          mr: 2
-        }}
-      >
-        <AddIcon />
-      </IconButton>
+    <Tooltip title={!selectedSite ? "Please select a site first" : "Add Widget"}>
+      <span>
+        <IconButton 
+          color="primary"
+          onClick={handleAddClick}
+          size="large"
+          disabled={!selectedSite || selectedSite.status !== 'active' || isCreatingWidget}
+          sx={{
+            backgroundColor: 'primary.main',
+            color: 'white',
+            '&:hover': {
+              backgroundColor: 'primary.dark',
+            },
+            '&.Mui-disabled': {
+              backgroundColor: 'action.disabledBackground',
+              color: 'action.disabled'
+            },
+            mr: 2
+          }}
+        >
+          {isCreatingWidget ? <CircularProgress size={24} color="inherit" /> : <AddIcon />}
+        </IconButton>
+      </span>
     </Tooltip>
   );
 
@@ -88,7 +121,20 @@ const MineSiteVision = () => {
       error={error}
       onErrorClose={() => setError(null)}
     >
-      <Box sx={{ p: 3 }}>
+      <Box sx={{ p: 3, position: 'relative' }}>
+        {widgetLoading && (
+          <Box 
+            sx={{ 
+              position: 'absolute',
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+              zIndex: 1
+            }}
+          >
+            <CircularProgress />
+          </Box>
+        )}
         <Grid container spacing={3}>
           {widgets.map((widget, index) => {
             const widgetConfig = getWidgetConfig(widget.type);

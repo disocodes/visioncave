@@ -13,7 +13,6 @@ export const useWidget = () => {
 };
 
 export const WidgetProvider = ({ children }) => {
-  const { selectedSite } = useSite();
   const [widgets, setWidgets] = useState([]);
   const [customWidgets, setCustomWidgets] = useState({});
   const [isAnyWidgetFullscreen, setIsAnyWidgetFullscreen] = useState(false);
@@ -21,18 +20,13 @@ export const WidgetProvider = ({ children }) => {
   const [error, setError] = useState(null);
   const [currentModule, setCurrentModule] = useState(null);
 
-  // Load widgets for current site and module
+  // Load widgets for current module
   const loadWidgets = useCallback(async () => {
-    if (!selectedSite?.id) {
-      console.warn('No site selected, skipping widget load');
-      return;
-    }
-    
     try {
       setLoading(true);
       setError(null);
-      console.log(`Loading widgets for site ${selectedSite.id} and module ${currentModule}`);
-      const data = await widgetService.getWidgets(selectedSite.id, currentModule);
+      console.log(`Loading widgets for module ${currentModule}`);
+      const data = await widgetService.getWidgets(currentModule);
       console.log('Loaded widgets:', data);
       setWidgets(data);
     } catch (err) {
@@ -41,7 +35,7 @@ export const WidgetProvider = ({ children }) => {
     } finally {
       setLoading(false);
     }
-  }, [selectedSite?.id, currentModule]);
+  }, [currentModule]);
 
   // Load custom widgets for a specific module
   const getCustomWidgets = useCallback(async (module) => {
@@ -64,50 +58,6 @@ export const WidgetProvider = ({ children }) => {
     }
   }, [customWidgets]);
 
-  // Connect to WebSocket when site changes
-  useEffect(() => {
-    if (!selectedSite?.id) return;
-
-    console.log(`Setting up WebSocket connection for site ${selectedSite.id}`);
-    const callbacks = {
-      onWidgetUpdate: (widgetId, data) => {
-        console.log(`Received widget update for ${widgetId}:`, data);
-        setWidgets(prev => prev.map(w => 
-          w.id === widgetId ? { ...w, ...data } : w
-        ));
-      },
-      onWidgetAlert: (widgetId, alert) => {
-        console.log(`Received alert for widget ${widgetId}:`, alert);
-        setWidgets(prev => prev.map(w => 
-          w.id === widgetId ? { 
-            ...w, 
-            alerts: [alert, ...(w.alerts || []).slice(0, 4)] 
-          } : w
-        ));
-      },
-      onWidgetDelete: (widgetId) => {
-        console.log(`Widget ${widgetId} deleted`);
-        setWidgets(prev => prev.filter(w => w.id !== widgetId));
-      },
-      onError: (error) => {
-        console.error('WebSocket error:', error);
-        setError('Lost connection to widget updates');
-      },
-      onReconnect: () => {
-        console.log('WebSocket reconnected, reloading widgets');
-        setError(null);
-        loadWidgets();
-      }
-    };
-
-    widgetService.connectToSite(selectedSite.id, callbacks);
-
-    return () => {
-      console.log(`Disconnecting from site ${selectedSite.id} WebSocket`);
-      widgetService.disconnectFromSite(selectedSite.id);
-    };
-  }, [selectedSite?.id, loadWidgets]);
-
   // Load widgets when site or module changes
   useEffect(() => {
     loadWidgets();
@@ -115,15 +65,10 @@ export const WidgetProvider = ({ children }) => {
 
   // Create a new widget
   const createWidget = async (widgetData) => {
-    if (!selectedSite?.id) {
-      throw new Error('No site selected');
-    }
-
     try {
       console.log('Creating widget:', widgetData);
       const newWidget = await widgetService.createWidget({
         ...widgetData,
-        site_id: selectedSite.id,
         module: currentModule
       });
       console.log('Widget created:', newWidget);
@@ -168,8 +113,6 @@ export const WidgetProvider = ({ children }) => {
 
   // Handle widget reordering
   const handleWidgetReorder = async (dragIndex, dropIndex) => {
-    if (!selectedSite?.id) return;
-
     console.log(`Reordering widget from ${dragIndex} to ${dropIndex}`);
     const reorderedWidgets = [...widgets];
     const [draggedWidget] = reorderedWidgets.splice(dragIndex, 1);
@@ -184,7 +127,7 @@ export const WidgetProvider = ({ children }) => {
     });
 
     try {
-      await widgetService.reorderWidgets(selectedSite.id, widgetOrders);
+      await widgetService.reorderWidgets(widgetOrders);
       setWidgets(reorderedWidgets.map((w, i) => ({
         ...w,
         order: widgetOrders[w.id]
@@ -228,7 +171,6 @@ export const WidgetProvider = ({ children }) => {
     loading,
     error,
     isAnyWidgetFullscreen,
-    currentSiteId: selectedSite?.id,
     currentModule,
     setCurrentModule,
     setIsAnyWidgetFullscreen,

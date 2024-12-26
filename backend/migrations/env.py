@@ -24,9 +24,11 @@ if config.config_file_name is not None:
 # for 'autogenerate' support
 target_metadata = Base.metadata
 
-# Set PostgreSQL URL based on docker-compose configuration
-SQLALCHEMY_DATABASE_URL = "postgresql://visioncave:visioncave@localhost:5432/visioncave"
-config.set_main_option("sqlalchemy.url", SQLALCHEMY_DATABASE_URL)
+# Use raw connection parameters to avoid interpolation issues with special characters
+config.set_main_option(
+    "sqlalchemy.url",
+    f"postgresql://{settings.POSTGRES_USER}:{settings.POSTGRES_PASSWORD}@{settings.POSTGRES_HOST}:{settings.POSTGRES_PORT}/{settings.POSTGRES_DB}"
+)
 
 def run_migrations_offline() -> None:
     """Run migrations in 'offline' mode.
@@ -57,9 +59,9 @@ def run_migrations_online() -> None:
     In this scenario we need to create an Engine
     and associate a connection with the context.
     """
-    # Configure SQLAlchemy with PostgreSQL settings
+    # Configure SQLAlchemy with raw connection parameters
     configuration = config.get_section(config.config_ini_section)
-    configuration["sqlalchemy.url"] = SQLALCHEMY_DATABASE_URL
+    configuration["sqlalchemy.url"] = f"postgresql://{settings.POSTGRES_USER}:{settings.POSTGRES_PASSWORD}@{settings.POSTGRES_HOST}:{settings.POSTGRES_PORT}/{settings.POSTGRES_DB}"
     
     connectable = engine_from_config(
         configuration,

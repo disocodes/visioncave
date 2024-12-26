@@ -1,41 +1,75 @@
+from typing import List, Optional
 from pydantic import BaseModel
-from typing import Optional, List, Dict
 from datetime import datetime
+from enum import Enum
 
-class TaskInfo(BaseModel):
-    id: int
+class StorageProvider(str, Enum):
+    LOCAL = "local"
+    GOOGLE_DRIVE = "google-drive"
+    AWS_S3 = "aws-s3"
+    NEXTCLOUD = "nextcloud"
+
+class StorageConfig(BaseModel):
+    provider: StorageProvider
+    credentials: Optional[dict] = None
+    bucket_name: Optional[str] = None
+    base_path: Optional[str] = None
+    retention_days: Optional[int] = None
+    max_storage_gb: Optional[float] = None
+
+class VLMConfig(BaseModel):
+    enabled: bool = False
+    model_name: str
+    confidence_threshold: float = 0.5
+    custom_model_path: Optional[str] = None
+    parameters: Optional[dict] = None
+
+class ModelType(str, Enum):
+    OPENCV = "opencv"
+    YOLO = "yolo"
+    CUSTOM = "custom"
+    VLM = "vlm"
+
+class ModelConfig(BaseModel):
+    id: str
     name: str
-    status: str
-    results: Optional[Dict] = None
+    type: ModelType
+    description: Optional[str] = None
+    version: Optional[str] = None
+    parameters: Optional[dict] = None
+    confidence_threshold: float = 0.5
 
 class RecordingBase(BaseModel):
     name: str
     file_path: str
-    camera_id: Optional[int] = None
-    retention_period: Optional[int] = None  # in days
-    storage_provider: Optional[str] = None  # 'local', 's3', etc.
+    owner_id: int
 
 class RecordingCreate(RecordingBase):
-    user_id: int
+    pass
 
-class RecordingUpdate(BaseModel):
-    name: Optional[str] = None
-    retention_period: Optional[int] = None
-    storage_provider: Optional[str] = None
-    storage_settings: Optional[Dict] = None
-
-class RecordingResponse(RecordingBase):
+class Recording(RecordingBase):
     id: int
     created_at: datetime
-    updated_at: Optional[datetime] = None
-    user_id: int
-    applied_tasks: Optional[List[TaskInfo]] = []
+    applied_tasks: Optional[List[dict]] = None
 
     class Config:
-        from_attributes = True
+        orm_mode = True
 
-class RecordingSettings(BaseModel):
-    retention_period: Optional[int] = None  # in days
-    storage_provider: Optional[str] = None
-    credentials: Optional[Dict] = None
-    recording_id: Optional[int] = None
+class TaskResult(BaseModel):
+    model_id: str
+    confidence: float
+    detections: List[dict]
+    timestamp: datetime
+
+class Task(BaseModel):
+    id: int
+    name: str
+    status: str
+    recording_id: int
+    model_id: str
+    results: Optional[List[TaskResult]] = None
+    created_at: datetime
+    completed_at: Optional[datetime] = None
+
+    class Config:
+        orm_mode = True

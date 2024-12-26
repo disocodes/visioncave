@@ -9,7 +9,9 @@ import {
   MenuItem,
   FormControl,
   InputLabel,
-  Divider
+  Divider,
+  Snackbar,
+  Alert
 } from '@mui/material';
 import { Menu as MenuIcon } from '@mui/icons-material';
 import VerticalNavigation from './VerticalNavigation';
@@ -18,7 +20,7 @@ import { useSite } from '../../contexts/SiteContext';
 
 const drawerWidth = 240;
 
-const ModuleLayout = ({ children, title, actions }) => {
+const ModuleLayout = ({ children, title, actions, error, onErrorClose }) => {
   const { isAnyWidgetFullscreen } = useWidget();
   const { sites, selectedSite, selectSite } = useSite();
 
@@ -98,6 +100,17 @@ const ModuleLayout = ({ children, title, actions }) => {
       >
         {children}
       </Box>
+
+      <Snackbar 
+        open={Boolean(error)} 
+        autoHideDuration={6000} 
+        onClose={onErrorClose}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+      >
+        <Alert onClose={onErrorClose} severity="error" sx={{ width: '100%' }}>
+          {error}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };

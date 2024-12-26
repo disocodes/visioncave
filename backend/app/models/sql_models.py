@@ -17,6 +17,8 @@ class Recording(Base):
     updated_at = Column(DateTime, nullable=True, onupdate=datetime.utcnow)
     retention_period = Column(Integer, nullable=True)  # in days
     storage_provider = Column(String, nullable=True)  # local, s3, etc.
+    processing_status = Column(String, default="pending")  # pending, processing, completed, failed
+    processing_results = Column(JSON, nullable=True)  # Results from model processing
     
     # Relationships
     owner = relationship("User", back_populates="recordings")
@@ -29,8 +31,11 @@ class Task(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, index=True)
     recording_id = Column(Integer, ForeignKey("recordings.id"))
-    status = Column(String)  # pending, running, completed, failed
-    results = Column(JSON, nullable=True)
+    model_id = Column(String, nullable=False)  # ID of the model being applied
+    celery_task_id = Column(String, nullable=True)  # Celery task ID for tracking
+    status = Column(String)  # queued, started, retry, success, failure
+    results = Column(JSON, nullable=True)  # Task results
+    error = Column(String, nullable=True)  # Error message if task failed
     created_at = Column(DateTime, default=datetime.utcnow)
     completed_at = Column(DateTime, nullable=True)
     

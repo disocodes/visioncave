@@ -25,8 +25,8 @@ class RealtimeProcessor:
             enable_auto_commit=True
         )
         
-        # Initialize MongoDB client
-        self.mongo_client = AsyncIOMotorClient(settings.MONGODB_URL)
+        # Initialize MongoDB client with URL-encoded credentials
+        self.mongo_client = AsyncIOMotorClient(settings.MONGODB_CONNECTION_URL)
         self.db = self.mongo_client['visioncave']
         
         # Initialize Socket.IO server

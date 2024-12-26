@@ -138,6 +138,68 @@ class RecordingsService {
       throw new Error('Failed to fetch recording tasks. Please try again later.');
     }
   }
+
+  async getAvailableModels() {
+    try {
+      const token = await getAuthToken();
+      const response = await api.get('/models', {
+        headers: {
+          'Authorization': token
+        }
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching models:', error);
+      throw new Error('Failed to fetch available models');
+    }
+  }
+
+  async configureStorage(config) {
+    try {
+      const token = await getAuthToken();
+      const response = await api.post('/recordings/storage/configure', config, {
+        headers: {
+          'Authorization': token
+        }
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error configuring storage:', error);
+      throw new Error('Failed to configure storage provider');
+    }
+  }
+
+  async configureVLM(config) {
+    try {
+      const token = await getAuthToken();
+      const response = await api.post('/recordings/vlm/configure', config, {
+        headers: {
+          'Authorization': token
+        }
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error configuring VLM:', error);
+      throw new Error('Failed to configure VLM settings');
+    }
+  }
+
+  async applyModels(recordingId, modelIds) {
+    try {
+      const token = await getAuthToken();
+      const response = await api.post(`/recordings/${recordingId}/apply-models`, {
+        model_ids: modelIds
+      }, {
+        headers: {
+          'Authorization': token
+        }
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error applying models:', error);
+      throw new Error('Failed to apply selected models');
+    }
+  }
 }
 
 export default new RecordingsService();

@@ -14,7 +14,6 @@ class WidgetService {
             const response = await axios.post(this.baseUrl, {
                 name: widgetData.name || widgetData.title,
                 type: widgetData.type,
-                site_id: widgetData.site_id,
                 owner_id: widgetData.owner_id || 1, // Default to 1 for development
                 config: widgetData.config || {},
                 module: widgetData.module || 'default',
@@ -45,10 +44,9 @@ class WidgetService {
         }
     }
 
-    async getWidgets(siteId, module) {
+    async getWidgets(module) {
         try {
             const params = {};
-            if (siteId) params.site_id = siteId;
             if (module) params.module = module;
             
             const response = await axios.get(this.baseUrl, { params });
@@ -125,10 +123,9 @@ class WidgetService {
         }
     }
 
-    async reorderWidgets(siteId, widgetOrders) {
+    async reorderWidgets(widgetOrders) {
         try {
             const response = await axios.post(`${this.baseUrl}/reorder`, {
-                site_id: siteId,
                 widget_orders: widgetOrders
             });
             return response.data;

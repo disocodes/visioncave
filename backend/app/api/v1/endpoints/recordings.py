@@ -1,14 +1,63 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Response
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 from sqlalchemy.orm import Session
 from ....models.sql_models import Recording
 from ....core.deps import get_db, get_current_user
 from ....services.recordings_service import RecordingsService
+from ....schemas.recording import StorageConfig, VLMConfig, ModelConfig
 from fastapi.responses import StreamingResponse
 import os
 
 router = APIRouter()
 recordings_service = RecordingsService()
+
+@router.get("/models", response_model=List[ModelConfig])
+async def list_available_models(
+    current_user = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get list of available CV and VLM models."""
+    return await recordings_service.get_available_models(db)
+
+@router.post("/storage/configure")
+async def configure_storage(
+    config: StorageConfig,
+    current_user = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Configure storage provider settings."""
+    try:
+        await recordings_service.configure_storage(db, config)
+        return {"message": "Storage configuration updated successfully"}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@router.post("/vlm/configure")
+async def configure_vlm(
+    config: VLMConfig,
+    current_user = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Configure VLM settings."""
+    try:
+        await recordings_service.configure_vlm(db, config)
+        return {"message": "VLM configuration updated successfully"}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@router.post("/{recording_id}/apply-models")
+async def apply_models(
+    recording_id: int,
+    model_ids: List[str],
+    current_user = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Apply selected models to a recording."""
+    try:
+        await recordings_service.apply_models(db, recording_id, model_ids)
+        return {"message": "Models applied successfully"}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 @router.get("/", response_model=List[dict])
 async def list_recordings(
